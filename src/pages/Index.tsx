@@ -289,56 +289,108 @@ const Index = () => {
 
     toast.info("Generando PDF...");
 
+    const wrapper = ganttRef.current;
+
+    // Guardar estilos originales para restaurar después
+    const adjustments: { el: HTMLElement; prev: Partial<CSSStyleDeclaration> }[] = [];
+
+    const pushAdjust = (el: HTMLElement, apply: (el: HTMLElement) => void) => {
+      adjustments.push({
+        el,
+        prev: {
+          overflow: el.style.overflow,
+          width: el.style.width,
+          height: el.style.height,
+          maxHeight: el.style.maxHeight,
+          maxWidth: el.style.maxWidth,
+          position: el.style.position,
+        },
+      });
+      apply(el);
+    };
+
     try {
-      // Guardar el estado del scroll
-      const ganttElement = ganttRef.current;
-      const scrollableElements = ganttElement.querySelectorAll('[class*="overflow"]');
-      const scrollStates: { element: Element; scrollTop: number; scrollLeft: number }[] = [];
-      
-      scrollableElements.forEach((el) => {
-        scrollStates.push({
-          element: el,
-          scrollTop: el.scrollTop,
-          scrollLeft: el.scrollLeft,
-        });
+      // Asegurar que todo el contenido sea visible para la captura
+      pushAdjust(wrapper, (el) => {
+        el.style.overflow = "visible";
+        el.style.width = `${el.scrollWidth}px`;
+        el.style.height = `${el.scrollHeight}px`;
+        el.style.maxWidth = "none";
+        el.style.maxHeight = "none";
       });
 
-      // Capturar todo el contenido incluyendo áreas con scroll
-      const canvas = await html2canvas(ganttElement, {
-        scale: 1.5,
+      // Expandir contenedores con scroll y quitar sticky para evitar recortes
+      const scrollers = wrapper.querySelectorAll<HTMLElement>(
+        ".overflow-auto, .overflow-x-auto, .overflow-y-auto, .overflow-hidden"
+      );
+      scrollers.forEach((el) =>
+        pushAdjust(el, (e) => {
+          e.style.overflow = "visible";
+          e.style.maxHeight = "none";
+          e.style.height = "auto";
+          e.style.maxWidth = "none";
+        })
+      );
+
+      const stickies = wrapper.querySelectorAll<HTMLElement>(".sticky");
+      stickies.forEach((el) => pushAdjust(el, (e) => (e.style.position = "static")));
+
+      // Forzar scroll al origen
+      window.scrollTo(0, 0);
+
+      // Capturar con buena resolución
+      const scale = Math.min(2, window.devicePixelRatio || 1.5);
+
+      const canvas = await html2canvas(wrapper, {
+        scale,
         useCORS: true,
         logging: false,
-        windowWidth: ganttElement.scrollWidth,
-        windowHeight: ganttElement.scrollHeight,
-        width: ganttElement.scrollWidth,
-        height: ganttElement.scrollHeight,
+        windowWidth: wrapper.scrollWidth,
+        windowHeight: wrapper.scrollHeight,
+        width: wrapper.scrollWidth,
+        height: wrapper.scrollHeight,
         scrollX: 0,
         scrollY: 0,
       });
 
-      // Restaurar el estado del scroll
-      scrollStates.forEach(({ element, scrollTop, scrollLeft }) => {
-        element.scrollTop = scrollTop;
-        element.scrollLeft = scrollLeft;
-      });
+      // Crear PDF multipágina en A4 apaisado
+      const pdf = new jsPDF("landscape", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
 
-      const imgData = canvas.toDataURL("image/png");
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      
-      const pdf = new jsPDF({
-        orientation: imgWidth > imgHeight ? "landscape" : "portrait",
-        unit: "px",
-        format: [imgWidth, imgHeight],
-      });
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      const imgData = canvas.toDataURL("image/png", 1.0);
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        pdf.addPage();
+        position -= pageHeight;
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
       pdf.save(`${projectSettings.name}-${new Date().toISOString().split("T")[0]}.pdf`);
-      
       toast.success("PDF exportado correctamente");
     } catch (error) {
       console.error("Error exporting PDF:", error);
       toast.error("Error al exportar PDF");
+    } finally {
+      // Restaurar estilos
+      adjustments.forEach(({ el, prev }) => {
+        if (prev.overflow !== undefined) el.style.overflow = prev.overflow as string;
+        if (prev.width !== undefined) el.style.width = prev.width as string;
+        if (prev.height !== undefined) el.style.height = prev.height as string;
+        if (prev.maxHeight !== undefined) el.style.maxHeight = prev.maxHeight as string;
+        if (prev.maxWidth !== undefined) el.style.maxWidth = prev.maxWidth as string;
+        if (prev.position !== undefined) el.style.position = prev.position as string;
+      });
     }
   };
 
