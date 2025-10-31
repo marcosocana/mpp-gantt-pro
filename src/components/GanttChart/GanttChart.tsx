@@ -9,34 +9,17 @@ interface GanttChartProps {
   tasks: Task[];
   onTaskClick: (task: Task) => void;
   onUpdateTasks: (tasks: Task[]) => void;
+  startDate?: Date;
+  endDate?: Date;
 }
 
-export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks }: GanttChartProps) => {
+export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propStartDate, endDate: propEndDate }: GanttChartProps) => {
   const DAY_WIDTH = 40;
   const ROW_HEIGHT = 48;
   const TASK_LIST_WIDTH = 320;
 
-  // Calculate date range from tasks
-  const getDateRange = () => {
-    if (tasks.length === 0) {
-      const today = new Date();
-      return {
-        start: startOfMonth(today),
-        end: endOfMonth(addMonths(today, 2)),
-      };
-    }
-
-    const allDates = tasks.flatMap(task => [task.startDate, task.endDate]);
-    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
-    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
-
-    return {
-      start: startOfMonth(minDate),
-      end: endOfMonth(addMonths(maxDate, 1)),
-    };
-  };
-
-  const { start: startDate, end: endDate } = getDateRange();
+  const startDate = propStartDate || startOfMonth(new Date(2025, 10, 1));
+  const endDate = propEndDate || endOfMonth(new Date(2025, 11, 31));
 
   const handleToggleExpand = (taskId: string) => {
     const toggleInTasks = (tasks: Task[]): Task[] => {

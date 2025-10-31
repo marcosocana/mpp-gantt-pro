@@ -1,14 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Task } from "@/types/gantt";
 import { GanttChart } from "@/components/GanttChart/GanttChart";
 import { TaskDialog } from "@/components/GanttChart/TaskDialog";
 import { Toolbar } from "@/components/Toolbar";
 import { PasswordLogin } from "@/components/PasswordLogin";
+import { ProjectSettingsDialog } from "@/components/ProjectSettingsDialog";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [projectSettings, setProjectSettings] = useState({
+    name: "Gestor de Proyectos Gantt",
+    startDate: new Date(2025, 10, 1),
+    endDate: new Date(2025, 11, 31),
+  });
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const ganttRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const auth = sessionStorage.getItem("gantt_authenticated");
@@ -171,9 +181,25 @@ const Index = () => {
     toast.success("Tarea eliminada");
   };
 
+  const handleAddSection = () => {
+    const newSection: Task = {
+      id: `section-${Date.now()}`,
+      title: "Nueva Sección",
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      progress: 0,
+      dependencies: [],
+      isExpanded: true,
+      children: [],
+    };
+
+    setTasks([...tasks, newSection]);
+    toast.success("Sección creada");
+  };
+
   const handleAddTask = () => {
     const newTask: Task = {
-      id: `new-${Date.now()}`,
+      id: `task-${Date.now()}`,
       title: "Nueva tarea",
       startDate: new Date(),
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -283,6 +309,37 @@ const Index = () => {
     toast.success("Proyecto exportado correctamente");
   };
 
+  const handleExportPDF = async () => {
+    if (!ganttRef.current) return;
+
+    toast.info("Generando PDF...");
+
+    try {
+      const canvas = await html2canvas(ganttRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: ganttRef.current.scrollWidth,
+        height: ganttRef.current.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? "landscape" : "portrait",
+        unit: "px",
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save(`${projectSettings.name}-${new Date().toISOString().split("T")[0]}.pdf`);
+      
+      toast.success("PDF exportado correctamente");
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast.error("Error al exportar PDF");
+    }
+  };
+
   if (!isAuthenticated) {
     return <PasswordLogin onAuthenticated={() => setIsAuthenticated(true)} />;
   }
@@ -290,20 +347,25 @@ const Index = () => {
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="border-b border-border bg-card px-6 py-4">
-        <h1 className="text-2xl font-bold">Gestor de Proyectos Gantt</h1>
+        <h1 className="text-2xl font-bold">{projectSettings.name}</h1>
       </header>
 
       <Toolbar
+        onAddSection={handleAddSection}
         onAddTask={handleAddTask}
         onImport={handleImport}
         onExport={handleExport}
+        onExportPDF={handleExportPDF}
+        onProjectSettings={() => setSettingsDialogOpen(true)}
       />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden" ref={ganttRef}>
         <GanttChart
           tasks={tasks}
           onTaskClick={handleTaskClick}
           onUpdateTasks={setTasks}
+          startDate={projectSettings.startDate}
+          endDate={projectSettings.endDate}
         />
       </div>
 
@@ -313,6 +375,13 @@ const Index = () => {
         onClose={() => setDialogOpen(false)}
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
+      />
+
+      <ProjectSettingsDialog
+        open={settingsDialogOpen}
+        onClose={() => setSettingsDialogOpen(false)}
+        settings={projectSettings}
+        onSave={setProjectSettings}
       />
     </div>
   );

@@ -33,7 +33,7 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
     >
       <div className={`h-full rounded relative overflow-hidden transition-all ${
         isSection ? "bg-primary/80" : "bg-chart-1"
-      } group-hover:brightness-110`}>
+      }`}>
         {/* Progress indicator in green */}
         {task.progress > 0 && (
           <div
@@ -49,9 +49,12 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
           </div>
         )}
         
-        {/* Progress percentage on hover */}
+        {/* Dark overlay on hover with 90% opacity */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/90 transition-all z-30 rounded" />
+        
+        {/* Progress percentage on hover - shown above dark overlay */}
         {!isSection && task.progress > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-black/20">
+          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-40">
             {task.progress}%
           </div>
         )}
