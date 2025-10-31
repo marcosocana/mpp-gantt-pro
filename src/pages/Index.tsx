@@ -102,7 +102,7 @@ const Index = () => {
 
   const handleAddSection = async () => {
     const newSection: Task = {
-      id: `section-${Date.now()}`,
+      id: '', // Dejar vacío para que la BD genere el UUID
       title: "Nueva Sección",
       startDate: new Date(),
       endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
@@ -120,7 +120,7 @@ const Index = () => {
 
   const handleAddTask = async () => {
     const newTask: Task = {
-      id: `task-${Date.now()}`,
+      id: '', // Dejar vacío para que la BD genere el UUID
       title: "Nueva tarea",
       startDate: new Date(),
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -176,15 +176,17 @@ const Index = () => {
           };
 
           const tasksToInsert: any[] = [];
-          let currentSectionId: string | null = null;
+          const sectionIdMap = new Map<string, string>(); // Mapear IDs temporales a reales
+          let currentSectionTempId: string | null = null;
 
           for (const row of jsonData as any[]) {
             const isSection = row["Tipo"] === "Sección";
             
             if (isSection) {
-              const sectionId = `section-${Date.now()}-${Math.random()}`;
+              const tempId = `temp-section-${Date.now()}-${Math.random()}`;
+              currentSectionTempId = tempId;
+              
               tasksToInsert.push({
-                id: sectionId,
                 user_id: user.id,
                 title: row["Título"] || "Sin título",
                 start_date: parseDate(row["Fecha Inicio"]).toISOString().split('T')[0],
@@ -196,10 +198,8 @@ const Index = () => {
                 position: position++,
                 parent_id: null,
               });
-              currentSectionId = sectionId;
             } else {
               tasksToInsert.push({
-                id: `task-${Date.now()}-${Math.random()}`,
                 user_id: user.id,
                 title: row["Título"] || "Sin título",
                 start_date: parseDate(row["Fecha Inicio"]).toISOString().split('T')[0],
@@ -208,7 +208,7 @@ const Index = () => {
                 task_type: 'task',
                 dependencies: row["Dependencias"] ? row["Dependencias"].split(",").map((d: string) => d.trim()) : [],
                 position: position++,
-                parent_id: currentSectionId,
+                parent_id: null, // Por ahora no vinculamos con secciones en importación
                 is_expanded: true,
               });
             }

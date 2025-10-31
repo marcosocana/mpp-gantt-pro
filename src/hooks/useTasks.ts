@@ -71,8 +71,7 @@ export const useTasks = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user logged in');
 
-      const taskData = {
-        id: task.id,
+      const taskData: any = {
         user_id: user.id,
         title: task.title,
         start_date: task.startDate.toISOString().split('T')[0],
@@ -84,6 +83,11 @@ export const useTasks = () => {
         is_expanded: task.isExpanded ?? true,
         dependencies: task.dependencies,
       };
+
+      // Solo incluir el ID si ya existe (para actualizaciones)
+      if (task.id && !task.id.startsWith('task-') && !task.id.startsWith('section-')) {
+        taskData.id = task.id;
+      }
 
       const { error } = await supabase
         .from('tasks')
@@ -137,8 +141,7 @@ export const useTasks = () => {
 
       const flattenTasks = (tasks: Task[], parentId?: string): any[] => {
         return tasks.flatMap((task, index) => {
-          const current = {
-            id: task.id,
+          const current: any = {
             user_id: user.id,
             title: task.title,
             start_date: task.startDate.toISOString().split('T')[0],
@@ -150,6 +153,11 @@ export const useTasks = () => {
             is_expanded: task.isExpanded ?? true,
             dependencies: task.dependencies,
           };
+
+          // Solo incluir ID si es válido (no es temporal)
+          if (task.id && !task.id.startsWith('task-') && !task.id.startsWith('section-')) {
+            current.id = task.id;
+          }
           
           const children = task.children ? flattenTasks(task.children, task.id) : [];
           return [current, ...children];
