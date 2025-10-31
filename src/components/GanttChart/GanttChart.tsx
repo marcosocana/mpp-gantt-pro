@@ -184,7 +184,7 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
     >
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header row */}
-        <div className="flex border-b border-border shrink-0">
+        <div className="flex border-b border-border shrink-0 sticky top-0 z-10 bg-card">
           <div
             className="bg-card border-r border-border flex items-center px-4 py-2 shrink-0"
             style={{ width: `${TASK_LIST_WIDTH}px` }}

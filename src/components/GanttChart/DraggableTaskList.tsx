@@ -26,13 +26,15 @@ const DraggableTaskItem = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: task.id, disabled: level !== 0 });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+  const style = level === 0
+    ? {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }
+    : undefined;
 
   const hasChildren = task.children && task.children.length > 0;
 
@@ -43,9 +45,13 @@ const DraggableTaskItem = ({
         style={{ height: `${rowHeight}px`, paddingLeft: `${level * 24 + 8}px` }}
         onClick={() => onTaskClick(task)}
       >
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 mr-1">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </div>
+        {level === 0 ? (
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 mr-1">
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="p-1 mr-1 w-4" />
+        )}
         
         {hasChildren ? (
           <Button

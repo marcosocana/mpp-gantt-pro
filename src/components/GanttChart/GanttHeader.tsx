@@ -1,4 +1,5 @@
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface GanttHeaderProps {
   startDate: Date;
@@ -40,7 +41,7 @@ export const GanttHeader = ({ startDate, endDate, dayWidth }: GanttHeaderProps) 
               className="border-r border-border px-2 py-2 text-center text-sm font-medium"
               style={{ width: `${month.width}px` }}
             >
-              {format(month.date, "MMMM yyyy")}
+              {format(month.date, "MMMM yyyy", { locale: es })}
             </div>
           ))}
         </div>
@@ -53,7 +54,7 @@ export const GanttHeader = ({ startDate, endDate, dayWidth }: GanttHeaderProps) 
               className="border-r border-border px-1 py-2 text-center text-xs text-muted-foreground"
               style={{ width: `${dayWidth}px` }}
             >
-              {format(day, "d")}
+              {format(day, "d", { locale: es })}
             </div>
           ))}
         </div>
