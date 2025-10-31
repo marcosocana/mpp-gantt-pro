@@ -5,6 +5,8 @@ import { TaskDialog } from "@/components/GanttChart/TaskDialog";
 import { Toolbar } from "@/components/Toolbar";
 import { PasswordLogin } from "@/components/PasswordLogin";
 import { ProjectSettingsDialog } from "@/components/ProjectSettingsDialog";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import html2canvas from "html2canvas";
@@ -88,6 +90,13 @@ const Index = () => {
     setIsAuthenticated(true);
     sessionStorage.setItem("gantt_authenticated", "true");
     handleSupabaseAuth();
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("gantt_authenticated");
+    sessionStorage.removeItem("gantt_user_role");
+    setIsAuthenticated(false);
+    toast.success("Sesión cerrada");
   };
 
   const handleTaskClick = (task: Task) => {
@@ -411,8 +420,12 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <header className="border-b border-border bg-card px-6 py-4">
+      <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">{projectSettings.name}</h1>
+        <Button onClick={handleLogout} variant="outline" size="sm" className="gap-2">
+          <LogOut className="h-4 w-4" />
+          Salir
+        </Button>
       </header>
 
       {!isViewerMode && (
