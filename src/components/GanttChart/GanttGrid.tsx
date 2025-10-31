@@ -39,8 +39,8 @@ export const GanttGrid = ({
   const flatTasks = flattenTasks(tasks);
 
   return (
-    <div ref={scrollRef} className="relative bg-card overflow-x-auto overflow-y-auto">
-      <div className="relative" style={{ width: `${totalWidth}px` }}>
+    <div ref={scrollRef} className="h-full overflow-auto bg-card">
+      <div className="relative" style={{ width: `${totalWidth}px`, minHeight: '100%' }}>
         {/* Vertical grid lines for days - background layer */}
         <div className="absolute inset-0 flex pointer-events-none" style={{ zIndex: 1 }}>
           {days.map((_, index) => (

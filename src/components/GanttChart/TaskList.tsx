@@ -53,7 +53,7 @@ export const TaskList = ({ tasks, rowHeight, onTaskClick, onToggleExpand }: Task
   };
 
   return (
-    <div className="bg-card border-r border-border overflow-y-auto">
+    <div className="bg-card border-r border-border h-full">
       {tasks.map(task => renderTask(task))}
     </div>
   );

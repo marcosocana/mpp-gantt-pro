@@ -71,25 +71,29 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex border-b border-border">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header row */}
+      <div className="flex border-b border-border shrink-0">
         <div
-          className="bg-card border-r border-border flex items-center px-4 py-2"
+          className="bg-card border-r border-border flex items-center px-4 py-2 shrink-0"
           style={{ width: `${TASK_LIST_WIDTH}px` }}
         >
           <h2 className="font-semibold text-sm">Título</h2>
         </div>
-        <div className="flex-1 overflow-x-auto" ref={headerScrollRef}>
-          <GanttHeader
-            startDate={startDate}
-            endDate={endDate}
-            dayWidth={DAY_WIDTH}
-          />
+        <div className="flex-1 overflow-hidden">
+          <div className="overflow-x-auto overflow-y-hidden" ref={headerScrollRef}>
+            <GanttHeader
+              startDate={startDate}
+              endDate={endDate}
+              dayWidth={DAY_WIDTH}
+            />
+          </div>
         </div>
       </div>
 
+      {/* Content area */}
       <div className="flex flex-1 overflow-hidden">
-        <div style={{ width: `${TASK_LIST_WIDTH}px` }}>
+        <div className="shrink-0 overflow-y-auto" style={{ width: `${TASK_LIST_WIDTH}px` }}>
           <TaskList
             tasks={tasks}
             rowHeight={ROW_HEIGHT}
@@ -97,7 +101,7 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
             onToggleExpand={handleToggleExpand}
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           <GanttGrid
             tasks={tasks}
             startDate={startDate}
