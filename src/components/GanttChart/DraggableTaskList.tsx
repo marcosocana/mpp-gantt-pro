@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 interface DraggableTaskItemProps {
   task: Task;
@@ -26,15 +27,13 @@ const DraggableTaskItem = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id, disabled: level !== 0 });
+  } = useSortable({ id: task.id });
 
-  const style = level === 0
-    ? {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-      }
-    : undefined;
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   const hasChildren = task.children && task.children.length > 0;
 
@@ -45,13 +44,9 @@ const DraggableTaskItem = ({
         style={{ height: `${rowHeight}px`, paddingLeft: `${level * 24 + 8}px` }}
         onClick={() => onTaskClick(task)}
       >
-        {level === 0 ? (
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 mr-1">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="p-1 mr-1 w-4" />
-        )}
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 mr-1">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
         
         {hasChildren ? (
           <Button
@@ -75,25 +70,24 @@ const DraggableTaskItem = ({
         
         <span className="text-sm truncate flex-1">
           {task.title}
-          <span className="text-xs text-muted-foreground ml-2">
-            ({task.type === 'section' ? 'Sección' : 'Tarea'})
-          </span>
         </span>
       </div>
       
       {hasChildren && task.isExpanded && (
-        <div>
-          {task.children!.map(child => (
-            <DraggableTaskItem
-              key={child.id}
-              task={child}
-              level={level + 1}
-              rowHeight={rowHeight}
-              onTaskClick={onTaskClick}
-              onToggleExpand={onToggleExpand}
-            />
-          ))}
-        </div>
+        <SortableContext items={task.children!.map(c => c.id)} strategy={verticalListSortingStrategy}>
+          <div>
+            {task.children!.map(child => (
+              <DraggableTaskItem
+                key={child.id}
+                task={child}
+                level={level + 1}
+                rowHeight={rowHeight}
+                onTaskClick={onTaskClick}
+                onToggleExpand={onToggleExpand}
+              />
+            ))}
+          </div>
+        </SortableContext>
       )}
     </div>
   );

@@ -165,12 +165,53 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
 
     if (!over || active.id === over.id) return;
 
-    const oldIndex = tasks.findIndex((task) => task.id === active.id);
-    const newIndex = tasks.findIndex((task) => task.id === over.id);
+    // Find the dragged item and target in the hierarchy
+    const findTaskAndParent = (tasks: Task[], taskId: string, parent: Task | null = null): { task: Task | null, parent: Task | null, siblings: Task[] } => {
+      for (const task of tasks) {
+        if (task.id === taskId) {
+          return { task, parent, siblings: tasks };
+        }
+        if (task.children) {
+          const result = findTaskAndParent(task.children, taskId, task);
+          if (result.task) return result;
+        }
+      }
+      return { task: null, parent: null, siblings: [] };
+    };
+
+    const activeInfo = findTaskAndParent(tasks, active.id as string);
+    const overInfo = findTaskAndParent(tasks, over.id as string);
+
+    if (!activeInfo.task || !overInfo.task) return;
+
+    // Only allow reordering within the same parent level
+    if (activeInfo.parent?.id !== overInfo.parent?.id) return;
+
+    const siblings = activeInfo.siblings;
+    const oldIndex = siblings.findIndex(t => t.id === active.id);
+    const newIndex = siblings.findIndex(t => t.id === over.id);
 
     if (oldIndex !== -1 && newIndex !== -1) {
-      const reorderedTasks = arrayMove(tasks, oldIndex, newIndex);
-      onUpdateTasks(reorderedTasks);
+      const reorderedSiblings = arrayMove(siblings, oldIndex, newIndex);
+      
+      // Reconstruct the task tree with reordered siblings
+      const updateTaskTree = (tasks: Task[]): Task[] => {
+        return tasks.map(task => {
+          if (activeInfo.parent && task.id === activeInfo.parent.id) {
+            return { ...task, children: reorderedSiblings };
+          }
+          if (task.children) {
+            return { ...task, children: updateTaskTree(task.children) };
+          }
+          return task;
+        });
+      };
+
+      const updatedTasks = activeInfo.parent 
+        ? updateTaskTree(tasks)
+        : reorderedSiblings;
+
+      onUpdateTasks(updatedTasks);
     }
   };
 

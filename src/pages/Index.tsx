@@ -13,7 +13,9 @@ import { useTasks } from "@/hooks/useTasks";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem("gantt_authenticated") === "true";
+  });
   const [isSupabaseReady, setIsSupabaseReady] = useState(false);
   const [projectSettings, setProjectSettings] = useState({
     name: "Gestor de Proyectos Gantt",
