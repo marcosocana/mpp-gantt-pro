@@ -100,7 +100,13 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                disabled={type === 'section'}
               />
+              {type === 'section' && (
+                <p className="text-xs text-muted-foreground">
+                  Las fechas de las secciones se calculan automáticamente según las tareas
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -110,6 +116,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                disabled={type === 'section'}
               />
             </div>
           </div>

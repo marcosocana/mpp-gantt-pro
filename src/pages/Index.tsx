@@ -19,7 +19,7 @@ const Index = () => {
   const [isSupabaseReady, setIsSupabaseReady] = useState(false);
   const [projectSettings, setProjectSettings] = useState({
     name: "Gestor de Proyectos Gantt",
-    startDate: new Date(2025, 10, 1),
+    startDate: new Date(2024, 9, 28), // 28 de octubre de 2024 (mes 9 porque enero es 0)
     endDate: new Date(2025, 11, 31),
   });
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -290,22 +290,49 @@ const Index = () => {
     toast.info("Generando PDF...");
 
     try {
-      const canvas = await html2canvas(ganttRef.current, {
-        scale: 2,
+      // Guardar el estado del scroll
+      const ganttElement = ganttRef.current;
+      const scrollableElements = ganttElement.querySelectorAll('[class*="overflow"]');
+      const scrollStates: { element: Element; scrollTop: number; scrollLeft: number }[] = [];
+      
+      scrollableElements.forEach((el) => {
+        scrollStates.push({
+          element: el,
+          scrollTop: el.scrollTop,
+          scrollLeft: el.scrollLeft,
+        });
+      });
+
+      // Capturar todo el contenido incluyendo áreas con scroll
+      const canvas = await html2canvas(ganttElement, {
+        scale: 1.5,
         useCORS: true,
         logging: false,
-        width: ganttRef.current.scrollWidth,
-        height: ganttRef.current.scrollHeight,
+        windowWidth: ganttElement.scrollWidth,
+        windowHeight: ganttElement.scrollHeight,
+        width: ganttElement.scrollWidth,
+        height: ganttElement.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
+      });
+
+      // Restaurar el estado del scroll
+      scrollStates.forEach(({ element, scrollTop, scrollLeft }) => {
+        element.scrollTop = scrollTop;
+        element.scrollLeft = scrollLeft;
       });
 
       const imgData = canvas.toDataURL("image/png");
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
       const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? "landscape" : "portrait",
+        orientation: imgWidth > imgHeight ? "landscape" : "portrait",
         unit: "px",
-        format: [canvas.width, canvas.height],
+        format: [imgWidth, imgHeight],
       });
 
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
       pdf.save(`${projectSettings.name}-${new Date().toISOString().split("T")[0]}.pdf`);
       
       toast.success("PDF exportado correctamente");

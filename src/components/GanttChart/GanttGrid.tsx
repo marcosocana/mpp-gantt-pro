@@ -1,5 +1,5 @@
 import { Task } from "@/types/gantt";
-import { eachDayOfInterval } from "date-fns";
+import { eachDayOfInterval, isToday, differenceInDays } from "date-fns";
 import { TaskBar } from "./TaskBar";
 import React from "react";
 
@@ -24,6 +24,10 @@ export const GanttGrid = ({
 }: GanttGridProps) => {
   const days = eachDayOfInterval({ start: startDate, end: endDate });
   const totalWidth = days.length * dayWidth;
+  
+  // Calcular posición de la línea del día actual
+  const todayIndex = days.findIndex(day => isToday(day));
+  const todayPosition = todayIndex >= 0 ? todayIndex * dayWidth : null;
   
   const flattenTasks = (tasks: Task[]): Task[] => {
     const result: Task[] = [];
@@ -51,6 +55,14 @@ export const GanttGrid = ({
             />
           ))}
         </div>
+
+        {/* Línea roja del día actual */}
+        {todayPosition !== null && (
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none"
+            style={{ left: `${todayPosition}px`, zIndex: 10 }}
+          />
+        )}
 
         {/* Task rows - foreground layer */}
         <div className="relative" style={{ zIndex: 5 }}>

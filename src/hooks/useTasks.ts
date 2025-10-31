@@ -58,6 +58,25 @@ export const useTasks = () => {
         }
       });
 
+      // Calcular fechas de las secciones basándose en sus tareas hijas
+      const calculateSectionDates = (task: Task) => {
+        if (task.children && task.children.length > 0) {
+          // Primero calcular fechas de las secciones hijas
+          task.children.forEach(child => calculateSectionDates(child));
+          
+          // Si es una sección, calcular sus fechas basándose en las tareas hijas
+          if (task.type === 'section') {
+            const childDates = task.children.flatMap(child => [child.startDate, child.endDate]);
+            if (childDates.length > 0) {
+              task.startDate = new Date(Math.min(...childDates.map(d => d.getTime())));
+              task.endDate = new Date(Math.max(...childDates.map(d => d.getTime())));
+            }
+          }
+        }
+      };
+
+      rootTasks.forEach(task => calculateSectionDates(task));
+
       setTasks(rootTasks);
     } catch (error: any) {
       console.error("Error fetching tasks:", error);
