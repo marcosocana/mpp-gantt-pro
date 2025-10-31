@@ -23,11 +23,13 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
 
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
+  const taskListScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const headerEl = headerScrollRef.current;
     const gridEl = gridScrollRef.current;
-    if (!headerEl || !gridEl) return;
+    const taskListEl = taskListScrollRef.current;
+    if (!headerEl || !gridEl || !taskListEl) return;
 
     let syncing = false;
 
@@ -42,15 +44,25 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
       if (syncing) return;
       syncing = true;
       headerEl.scrollLeft = gridEl.scrollLeft;
+      taskListEl.scrollTop = gridEl.scrollTop;
+      syncing = false;
+    };
+
+    const onTaskListScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      gridEl.scrollTop = taskListEl.scrollTop;
       syncing = false;
     };
 
     headerEl.addEventListener("scroll", onHeaderScroll);
     gridEl.addEventListener("scroll", onGridScroll);
+    taskListEl.addEventListener("scroll", onTaskListScroll);
 
     return () => {
       headerEl.removeEventListener("scroll", onHeaderScroll);
       gridEl.removeEventListener("scroll", onGridScroll);
+      taskListEl.removeEventListener("scroll", onTaskListScroll);
     };
   }, []);
 
@@ -93,12 +105,13 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
 
       {/* Content area */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="shrink-0 overflow-y-auto" style={{ width: `${TASK_LIST_WIDTH}px` }}>
+        <div className="shrink-0" style={{ width: `${TASK_LIST_WIDTH}px` }}>
           <TaskList
             tasks={tasks}
             rowHeight={ROW_HEIGHT}
             onTaskClick={onTaskClick}
             onToggleExpand={handleToggleExpand}
+            scrollRef={taskListScrollRef}
           />
         </div>
         <div className="flex-1 overflow-hidden">

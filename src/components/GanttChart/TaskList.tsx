@@ -7,9 +7,10 @@ interface TaskListProps {
   rowHeight: number;
   onTaskClick: (task: Task) => void;
   onToggleExpand: (taskId: string) => void;
+  scrollRef?: React.Ref<HTMLDivElement>;
 }
 
-export const TaskList = ({ tasks, rowHeight, onTaskClick, onToggleExpand }: TaskListProps) => {
+export const TaskList = ({ tasks, rowHeight, onTaskClick, onToggleExpand, scrollRef }: TaskListProps) => {
   const renderTask = (task: Task, level: number = 0) => {
     const hasChildren = task.children && task.children.length > 0;
     
@@ -53,7 +54,7 @@ export const TaskList = ({ tasks, rowHeight, onTaskClick, onToggleExpand }: Task
   };
 
   return (
-    <div className="bg-card border-r border-border h-full">
+    <div ref={scrollRef} className="bg-card border-r border-border h-full overflow-y-auto">
       {tasks.map(task => renderTask(task))}
     </div>
   );
