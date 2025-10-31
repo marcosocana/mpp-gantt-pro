@@ -11,7 +11,10 @@ export const useTasks = () => {
   const fetchTasks = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('tasks')
@@ -57,11 +60,7 @@ export const useTasks = () => {
 
       setTasks(rootTasks);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.error("Error fetching tasks:", error);
     } finally {
       setLoading(false);
     }

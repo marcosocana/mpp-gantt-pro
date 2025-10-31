@@ -3,6 +3,7 @@ import { Task } from "@/types/gantt";
 import { GanttChart } from "@/components/GanttChart/GanttChart";
 import { TaskDialog } from "@/components/GanttChart/TaskDialog";
 import { Toolbar } from "@/components/Toolbar";
+import { PasswordLogin } from "@/components/PasswordLogin";
 import { ProjectSettingsDialog } from "@/components/ProjectSettingsDialog";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -10,17 +11,10 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useTasks } from "@/hooks/useTasks";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isSupabaseReady, setIsSupabaseReady] = useState(false);
   const [projectSettings, setProjectSettings] = useState({
     name: "Gestor de Proyectos Gantt",
     startDate: new Date(2025, 10, 1),
@@ -31,54 +25,64 @@ const Index = () => {
   const { tasks, loading, saveTask, deleteTask, updateTasksOrder } = useTasks();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
+    const auth = sessionStorage.getItem("gantt_authenticated");
+    if (auth === "true") {
+      setIsAuthenticated(true);
+      handleSupabaseAuth();
+    }
   }, []);
+
+  const handleSupabaseAuth = async () => {
+    try {
+      // Usar credenciales fijas para el proyecto
+      const email = "admin@gantt.local";
+      const password = "Qu!m!ca_2025_Gantt";
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // Intentar login primero
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) {
+          // Si falla el login, crear cuenta
+          const { error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/`,
+            },
+          });
+
+          if (signUpError) {
+            console.error("Error en autenticación:", signUpError);
+          } else {
+            // Después de crear cuenta, hacer login
+            await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+          }
+        }
+      }
+      
+      setIsSupabaseReady(true);
+    } catch (error) {
+      console.error("Error en autenticación Supabase:", error);
+      setIsSupabaseReady(true);
+    }
+  };
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-      toast.success("Inicio de sesión exitoso");
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
-      if (error) throw error;
-      toast.success("Registro exitoso. Por favor inicia sesión.");
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Sesión cerrada");
+  const handleAuthenticated = () => {
+    setIsAuthenticated(true);
+    sessionStorage.setItem("gantt_authenticated", "true");
+    handleSupabaseAuth();
   };
 
   const handleTaskClick = (task: Task) => {
@@ -88,10 +92,12 @@ const Index = () => {
 
   const handleSaveTask = async (updatedTask: Task) => {
     await saveTask(updatedTask);
+    setDialogOpen(false);
   };
 
   const handleDeleteTask = async (taskId: string) => {
     await deleteTask(taskId);
+    setDialogOpen(false);
   };
 
   const handleAddSection = async () => {
@@ -109,6 +115,7 @@ const Index = () => {
     };
 
     await saveTask(newSection);
+    toast.success("Sección creada");
   };
 
   const handleAddTask = async () => {
@@ -124,6 +131,7 @@ const Index = () => {
     };
 
     await saveTask(newTask);
+    toast.success("Tarea creada");
   };
 
   const handleImport = () => {
@@ -143,8 +151,6 @@ const Index = () => {
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-          const importedTasks: Task[] = [];
-          let currentSection: Task | null = null;
           let position = 0;
 
           const parseDate = (dateValue: any): Date => {
@@ -160,11 +166,14 @@ const Index = () => {
             return isNaN(parsed.getTime()) ? new Date() : parsed;
           };
 
+          const tasksToImport: Task[] = [];
+          let currentSectionId: string | null = null;
+
           for (const row of jsonData as any[]) {
             const isSection = row["Tipo"] === "Sección";
             
             if (isSection) {
-              currentSection = {
+              const section: Task = {
                 id: `section-${Date.now()}-${Math.random()}`,
                 title: row["Título"] || "Sin título",
                 startDate: parseDate(row["Fecha Inicio"]),
@@ -176,8 +185,8 @@ const Index = () => {
                 position: position++,
                 children: [],
               };
-              importedTasks.push(currentSection);
-              await saveTask(currentSection);
+              tasksToImport.push(section);
+              currentSectionId = section.id;
             } else {
               const task: Task = {
                 id: `task-${Date.now()}-${Math.random()}`,
@@ -188,16 +197,15 @@ const Index = () => {
                 type: 'task',
                 dependencies: row["Dependencias"] ? row["Dependencias"].split(",").map((d: string) => d.trim()) : [],
                 position: position++,
-                parentId: currentSection?.id,
+                parentId: currentSectionId || undefined,
               };
-
-              if (currentSection) {
-                currentSection.children?.push(task);
-              } else {
-                importedTasks.push(task);
-              }
-              await saveTask(task);
+              tasksToImport.push(task);
             }
+          }
+
+          // Guardar todas las tareas
+          for (const task of tasksToImport) {
+            await saveTask(task);
           }
 
           toast.success("Proyecto importado correctamente");
@@ -279,83 +287,11 @@ const Index = () => {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Gestor de Proyectos Gantt</CardTitle>
-            <CardDescription>Inicia sesión o regístrate para continuar</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="login">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
-                <TabsTrigger value="signup">Registrarse</TabsTrigger>
-              </TabsList>
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Iniciar Sesión
-                  </Button>
-                </form>
-              </TabsContent>
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Contraseña</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Registrarse
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (!isAuthenticated) {
+    return <PasswordLogin onAuthenticated={handleAuthenticated} />;
   }
 
-  if (loading) {
+  if (!isSupabaseReady || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-lg">Cargando...</div>
@@ -365,11 +301,8 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <header className="border-b border-border bg-card px-6 py-4 flex justify-between items-center">
+      <header className="border-b border-border bg-card px-6 py-4">
         <h1 className="text-2xl font-bold">{projectSettings.name}</h1>
-        <Button variant="outline" onClick={handleLogout}>
-          Cerrar Sesión
-        </Button>
       </header>
 
       <Toolbar
