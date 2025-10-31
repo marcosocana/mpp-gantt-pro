@@ -27,9 +27,10 @@ interface GanttChartProps {
   onUpdateTasks: (tasks: Task[]) => void;
   startDate?: Date;
   endDate?: Date;
+  isViewerMode?: boolean;
 }
 
-export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propStartDate, endDate: propEndDate }: GanttChartProps) => {
+export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propStartDate, endDate: propEndDate, isViewerMode = false }: GanttChartProps) => {
   const DAY_WIDTH = 40;
   const ROW_HEIGHT = 48;
   const TASK_LIST_WIDTH = 320;
@@ -219,9 +220,9 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
 
   return (
     <DndContext
-      sensors={sensors}
+      sensors={isViewerMode ? [] : sensors}
       collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
+      onDragEnd={isViewerMode ? () => {} : handleDragEnd}
     >
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header row */}
@@ -251,7 +252,7 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
                 tasks={tasks}
                 rowHeight={ROW_HEIGHT}
                 onTaskClick={onTaskClick}
-                onToggleExpand={handleToggleExpand}
+                onToggleExpand={isViewerMode ? () => {} : handleToggleExpand}
                 scrollRef={taskListScrollRef}
               />
             </SortableContext>

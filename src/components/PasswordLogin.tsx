@@ -20,7 +20,13 @@ export const PasswordLogin = ({ onAuthenticated }: PasswordLoginProps) => {
     setTimeout(() => {
       if (password === "Qu!m!ca_2025") {
         sessionStorage.setItem("gantt_authenticated", "true");
+        sessionStorage.setItem("gantt_user_role", "editor");
         toast.success("Acceso concedido");
+        onAuthenticated();
+      } else if (password === "Qu!m!ca") {
+        sessionStorage.setItem("gantt_authenticated", "true");
+        sessionStorage.setItem("gantt_user_role", "viewer");
+        toast.success("Acceso concedido (solo visualización)");
         onAuthenticated();
       } else {
         toast.error("Contraseña incorrecta");

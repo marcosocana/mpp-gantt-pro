@@ -16,6 +16,9 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem("gantt_authenticated") === "true";
   });
+  const [isViewerMode] = useState(() => {
+    return sessionStorage.getItem("gantt_user_role") === "viewer";
+  });
   const [isSupabaseReady, setIsSupabaseReady] = useState(false);
   const [projectSettings, setProjectSettings] = useState({
     name: "Gestor de Proyectos Gantt",
@@ -412,22 +415,25 @@ const Index = () => {
         <h1 className="text-2xl font-bold">{projectSettings.name}</h1>
       </header>
 
-      <Toolbar
-        onAddSection={handleAddSection}
-        onAddTask={handleAddTask}
-        onImport={handleImport}
-        onExport={handleExport}
-        onExportPDF={handleExportPDF}
-        onProjectSettings={() => setSettingsDialogOpen(true)}
-      />
+      {!isViewerMode && (
+        <Toolbar
+          onAddSection={handleAddSection}
+          onAddTask={handleAddTask}
+          onImport={handleImport}
+          onExport={handleExport}
+          onExportPDF={handleExportPDF}
+          onProjectSettings={() => setSettingsDialogOpen(true)}
+        />
+      )}
 
       <div className="flex-1 overflow-hidden" ref={ganttRef}>
         <GanttChart
           tasks={tasks}
-          onTaskClick={handleTaskClick}
+          onTaskClick={isViewerMode ? () => {} : handleTaskClick}
           onUpdateTasks={updateTasksOrder}
           startDate={projectSettings.startDate}
           endDate={projectSettings.endDate}
+          isViewerMode={isViewerMode}
         />
       </div>
 
