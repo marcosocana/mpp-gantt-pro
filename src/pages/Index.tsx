@@ -231,6 +231,21 @@ const Index = () => {
           const importedTasks: Task[] = [];
           let currentSection: Task | null = null;
 
+          const parseDate = (dateValue: any): Date => {
+            if (!dateValue) return new Date();
+            
+            // Si es un número serial de Excel
+            if (typeof dateValue === 'number') {
+              const excelEpoch = new Date(1899, 11, 30);
+              const date = new Date(excelEpoch.getTime() + dateValue * 86400000);
+              return date;
+            }
+            
+            // Si es un string
+            const parsed = new Date(dateValue);
+            return isNaN(parsed.getTime()) ? new Date() : parsed;
+          };
+
           jsonData.forEach((row: any) => {
             const isSection = row["Tipo"] === "Sección";
             
@@ -238,8 +253,8 @@ const Index = () => {
               currentSection = {
                 id: `section-${Date.now()}-${Math.random()}`,
                 title: row["Título"] || "Sin título",
-                startDate: row["Fecha Inicio"] ? new Date(row["Fecha Inicio"]) : new Date(),
-                endDate: row["Fecha Fin"] ? new Date(row["Fecha Fin"]) : new Date(),
+                startDate: parseDate(row["Fecha Inicio"]),
+                endDate: parseDate(row["Fecha Fin"]),
                 progress: Number(row["Progreso (%)"]) || 0,
                 dependencies: [],
                 isExpanded: true,
@@ -250,8 +265,8 @@ const Index = () => {
               const task: Task = {
                 id: `task-${Date.now()}-${Math.random()}`,
                 title: row["Título"] || "Sin título",
-                startDate: row["Fecha Inicio"] ? new Date(row["Fecha Inicio"]) : new Date(),
-                endDate: row["Fecha Fin"] ? new Date(row["Fecha Fin"]) : new Date(),
+                startDate: parseDate(row["Fecha Inicio"]),
+                endDate: parseDate(row["Fecha Fin"]),
                 progress: Number(row["Progreso (%)"]) || 0,
                 dependencies: row["Dependencias"] ? row["Dependencias"].split(",").map((d: string) => d.trim()) : [],
               };
@@ -279,6 +294,13 @@ const Index = () => {
   const handleExport = () => {
     const exportData: any[] = [];
 
+    const formatDate = (date: Date) => {
+      if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+        return new Date().toISOString().split("T")[0];
+      }
+      return date.toISOString().split("T")[0];
+    };
+
     const flattenTasks = (tasks: Task[], parentType?: string) => {
       tasks.forEach((task) => {
         const isSection = task.children && task.children.length > 0;
@@ -286,8 +308,8 @@ const Index = () => {
         exportData.push({
           "Tipo": isSection ? "Sección" : "Tarea",
           "Título": task.title,
-          "Fecha Inicio": task.startDate.toISOString().split("T")[0],
-          "Fecha Fin": task.endDate.toISOString().split("T")[0],
+          "Fecha Inicio": formatDate(task.startDate),
+          "Fecha Fin": formatDate(task.endDate),
           "Progreso (%)": task.progress,
           "Dependencias": task.dependencies?.join(", ") || "",
         });
