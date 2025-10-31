@@ -36,23 +36,23 @@ export const GanttGrid = ({
 
   return (
     <div className="relative bg-card overflow-x-auto overflow-y-auto">
-      {/* Vertical grid lines for days */}
-      <div className="absolute inset-0 flex pointer-events-none">
+      {/* Vertical grid lines for days - background layer */}
+      <div className="absolute inset-0 flex pointer-events-none" style={{ zIndex: 1 }}>
         {days.map((_, index) => (
           <div
             key={index}
-            className="border-r border-border"
+            className="border-r border-border/40"
             style={{ width: `${dayWidth}px` }}
           />
         ))}
       </div>
 
-      {/* Task rows */}
-      <div className="relative">
+      {/* Task rows - foreground layer */}
+      <div className="relative" style={{ zIndex: 5 }}>
         {flatTasks.map((task, index) => (
           <div
             key={task.id}
-            className="relative border-b border-border"
+            className="relative border-b border-border/50"
             style={{ height: `${rowHeight}px` }}
           >
             <TaskBar

@@ -16,6 +16,8 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
   const left = startOffset * dayWidth;
   const width = duration * dayWidth;
 
+  const isSection = task.children && task.children.length > 0;
+
   return (
     <div
       className="absolute cursor-pointer group"
@@ -24,21 +26,35 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
         width: `${width}px`,
         top: "50%",
         transform: "translateY(-50%)",
-        height: "28px",
+        height: isSection ? "10px" : "28px",
+        zIndex: 10,
       }}
       onClick={() => onTaskClick(task)}
     >
-      <div className="h-full bg-primary rounded relative overflow-hidden transition-all group-hover:bg-primary/80">
-        {/* Progress indicator */}
-        <div
-          className="absolute inset-y-0 left-0 bg-primary/60 rounded-l"
-          style={{ width: `${task.progress}%` }}
-        />
+      <div className={`h-full rounded relative overflow-hidden transition-all ${
+        isSection ? "bg-primary/80" : "bg-chart-1"
+      } group-hover:brightness-110`}>
+        {/* Progress indicator in green */}
+        {task.progress > 0 && (
+          <div
+            className="absolute inset-y-0 left-0 bg-green-500/70 rounded-l transition-all"
+            style={{ width: `${task.progress}%` }}
+          />
+        )}
         
         {/* Task title on bar */}
-        <div className="absolute inset-0 flex items-center px-2 text-xs font-medium text-primary-foreground truncate">
-          {task.title}
-        </div>
+        {!isSection && (
+          <div className="absolute inset-0 flex items-center px-2 text-xs font-medium text-primary-foreground truncate z-20">
+            {task.title}
+          </div>
+        )}
+        
+        {/* Progress percentage on hover */}
+        {!isSection && task.progress > 0 && (
+          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-black/20">
+            {task.progress}%
+          </div>
+        )}
       </div>
     </div>
   );

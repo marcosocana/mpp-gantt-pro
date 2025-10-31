@@ -5,6 +5,7 @@ import { TaskDialog } from "@/components/GanttChart/TaskDialog";
 import { Toolbar } from "@/components/Toolbar";
 import { PasswordLogin } from "@/components/PasswordLogin";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -187,40 +188,98 @@ const Index = () => {
   const handleImport = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".json,.mpp";
+    input.accept = ".xlsx,.xls";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
-      if (file.name.endsWith(".mpp")) {
-        toast.error("Los archivos .mpp requieren procesamiento en el servidor. Por favor, exporta como JSON desde MS Project.");
-        return;
-      }
-
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
-          const imported = JSON.parse(event.target?.result as string);
-          setTasks(imported);
+          const data = event.target?.result;
+          const workbook = XLSX.read(data, { type: "binary" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+          const importedTasks: Task[] = [];
+          let currentSection: Task | null = null;
+
+          jsonData.forEach((row: any) => {
+            const isSection = row["Tipo"] === "Sección" || !row["Tipo"];
+            
+            if (isSection) {
+              currentSection = {
+                id: row["ID"] || `section-${Date.now()}-${Math.random()}`,
+                title: row["Título"] || row["Nombre"] || "Sin título",
+                startDate: row["Fecha Inicio"] ? new Date(row["Fecha Inicio"]) : new Date(),
+                endDate: row["Fecha Fin"] ? new Date(row["Fecha Fin"]) : new Date(),
+                progress: Number(row["Progreso (%)"]) || 0,
+                dependencies: [],
+                isExpanded: true,
+                children: [],
+              };
+              importedTasks.push(currentSection);
+            } else {
+              const task: Task = {
+                id: row["ID"] || `task-${Date.now()}-${Math.random()}`,
+                title: row["Título"] || row["Nombre"] || "Sin título",
+                startDate: row["Fecha Inicio"] ? new Date(row["Fecha Inicio"]) : new Date(),
+                endDate: row["Fecha Fin"] ? new Date(row["Fecha Fin"]) : new Date(),
+                progress: Number(row["Progreso (%)"]) || 0,
+                dependencies: row["Dependencias"] ? row["Dependencias"].split(",").map((d: string) => d.trim()) : [],
+              };
+
+              if (currentSection) {
+                currentSection.children?.push(task);
+              } else {
+                importedTasks.push(task);
+              }
+            }
+          });
+
+          setTasks(importedTasks);
           toast.success("Proyecto importado correctamente");
         } catch (error) {
+          console.error("Error importing:", error);
           toast.error("Error al importar el archivo");
         }
       };
-      reader.readAsText(file);
+      reader.readAsBinaryString(file);
     };
     input.click();
   };
 
   const handleExport = () => {
-    const dataStr = JSON.stringify(tasks, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `gantt-project-${new Date().toISOString().split("T")[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const exportData: any[] = [];
+
+    const flattenTasks = (tasks: Task[], parentType?: string) => {
+      tasks.forEach((task) => {
+        const isSection = task.children && task.children.length > 0;
+        
+        exportData.push({
+          "ID": task.id,
+          "Tipo": isSection ? "Sección" : "Tarea",
+          "Título": task.title,
+          "Fecha Inicio": task.startDate.toISOString().split("T")[0],
+          "Fecha Fin": task.endDate.toISOString().split("T")[0],
+          "Progreso (%)": task.progress,
+          "Dependencias": task.dependencies?.join(", ") || "",
+        });
+
+        if (task.children) {
+          flattenTasks(task.children, "Tarea");
+        }
+      });
+    };
+
+    flattenTasks(tasks);
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Gantt");
+
+    XLSX.writeFile(workbook, `gantt-project-${new Date().toISOString().split("T")[0]}.xlsx`);
     toast.success("Proyecto exportado correctamente");
   };
 
