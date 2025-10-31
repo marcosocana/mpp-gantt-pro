@@ -160,8 +160,6 @@ const Index = () => {
 
           await supabase.from('tasks').delete().eq('user_id', user.id);
 
-          let position = 0;
-
           const parseDate = (dateValue: any): Date => {
             if (!dateValue) return new Date();
             
@@ -175,18 +173,19 @@ const Index = () => {
             return isNaN(parsed.getTime()) ? new Date() : parsed;
           };
 
-          const tasksToInsert: any[] = [];
-          const sectionIdMap = new Map<string, string>(); // Mapear IDs temporales a reales
-          let currentSectionTempId: string | null = null;
-
-          for (const row of jsonData as any[]) {
+          const allRows = jsonData as any[];
+          let position = 0;
+          
+          // Primera pasada: insertar secciones y obtener sus IDs
+          const sectionMap = new Map<number, string>(); // índice de fila -> ID de sección
+          let currentSectionIdx = -1;
+          
+          for (let i = 0; i < allRows.length; i++) {
+            const row = allRows[i];
             const isSection = row["Tipo"] === "Sección";
             
             if (isSection) {
-              const tempId = `temp-section-${Date.now()}-${Math.random()}`;
-              currentSectionTempId = tempId;
-              
-              tasksToInsert.push({
+              const { data, error } = await supabase.from('tasks').insert({
                 user_id: user.id,
                 title: row["Título"] || "Sin título",
                 start_date: parseDate(row["Fecha Inicio"]).toISOString().split('T')[0],
@@ -197,9 +196,28 @@ const Index = () => {
                 is_expanded: true,
                 position: position++,
                 parent_id: null,
-              });
+              }).select().single();
+              
+              if (error) throw error;
+              if (data) {
+                sectionMap.set(i, data.id);
+                currentSectionIdx = i;
+              }
+            }
+          }
+          
+          // Segunda pasada: insertar tareas vinculadas a secciones
+          currentSectionIdx = -1;
+          for (let i = 0; i < allRows.length; i++) {
+            const row = allRows[i];
+            const isSection = row["Tipo"] === "Sección";
+            
+            if (isSection) {
+              currentSectionIdx = i;
             } else {
-              tasksToInsert.push({
+              const parentId = currentSectionIdx >= 0 ? sectionMap.get(currentSectionIdx) : null;
+              
+              const { error } = await supabase.from('tasks').insert({
                 user_id: user.id,
                 title: row["Título"] || "Sin título",
                 start_date: parseDate(row["Fecha Inicio"]).toISOString().split('T')[0],
@@ -208,21 +226,15 @@ const Index = () => {
                 task_type: 'task',
                 dependencies: row["Dependencias"] ? row["Dependencias"].split(",").map((d: string) => d.trim()) : [],
                 position: position++,
-                parent_id: null, // Por ahora no vinculamos con secciones en importación
+                parent_id: parentId,
                 is_expanded: true,
               });
+              
+              if (error) throw error;
             }
           }
 
-          // Insertar todas las tareas de una vez
-          const { error } = await supabase.from('tasks').insert(tasksToInsert);
-          
-          if (error) {
-            console.error("Error insertando tareas:", error);
-            toast.error("Error al importar el archivo");
-          } else {
-            toast.success("Proyecto importado correctamente");
-          }
+          toast.success("Proyecto importado correctamente");
         } catch (error) {
           console.error("Error importing:", error);
           toast.error("Error al importar el archivo");

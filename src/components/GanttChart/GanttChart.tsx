@@ -4,6 +4,7 @@ import { GanttHeader } from "./GanttHeader";
 import { DraggableTaskList } from "./DraggableTaskList";
 import { GanttGrid } from "./GanttGrid";
 import { startOfMonth, endOfMonth } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DndContext,
   closestCenter,
@@ -114,7 +115,7 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
     };
   }, []);
 
-  const handleToggleExpand = (taskId: string) => {
+  const handleToggleExpand = async (taskId: string) => {
     const toggleInTasks = (tasks: Task[]): Task[] => {
       return tasks.map(task => {
         if (task.id === taskId) {
@@ -128,6 +129,27 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
     };
 
     const updatedTasks = toggleInTasks(tasks);
+    
+    // Guardar el estado de expansión en la base de datos
+    const findAndSaveTask = async (tasks: Task[]): Promise<void> => {
+      for (const task of tasks) {
+        if (task.id === taskId) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase
+              .from('tasks')
+              .update({ is_expanded: !task.isExpanded })
+              .eq('id', taskId);
+          }
+          return;
+        }
+        if (task.children) {
+          await findAndSaveTask(task.children);
+        }
+      }
+    };
+
+    await findAndSaveTask(tasks);
     onUpdateTasks(updatedTasks);
   };
 
