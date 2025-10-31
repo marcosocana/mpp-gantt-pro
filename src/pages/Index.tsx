@@ -18,9 +18,7 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem("gantt_authenticated") === "true";
   });
-  const [isViewerMode] = useState(() => {
-    return sessionStorage.getItem("gantt_user_role") === "viewer";
-  });
+  const isViewerMode = sessionStorage.getItem("gantt_user_role") === "viewer";
   const [isSupabaseReady, setIsSupabaseReady] = useState(false);
   const [projectSettings, setProjectSettings] = useState({
     name: "Gestor de Proyectos Gantt",
