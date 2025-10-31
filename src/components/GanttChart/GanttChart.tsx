@@ -18,8 +18,41 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
   const ROW_HEIGHT = 48;
   const TASK_LIST_WIDTH = 320;
 
-  const startDate = propStartDate || startOfMonth(new Date(2025, 10, 1));
-  const endDate = propEndDate || endOfMonth(new Date(2025, 11, 31));
+  // Calculate date range from tasks if not provided
+  const calculateDateRange = () => {
+    const flattenTasks = (tasks: Task[]): Task[] => {
+      const result: Task[] = [];
+      tasks.forEach(task => {
+        result.push(task);
+        if (task.children) {
+          result.push(...flattenTasks(task.children));
+        }
+      });
+      return result;
+    };
+
+    const allTasks = flattenTasks(tasks);
+    
+    if (allTasks.length === 0) {
+      return {
+        start: startOfMonth(new Date()),
+        end: endOfMonth(new Date())
+      };
+    }
+
+    const allDates = allTasks.flatMap(task => [task.startDate, task.endDate]);
+    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+
+    return { start: minDate, end: maxDate };
+  };
+
+  const dateRange = propStartDate && propEndDate 
+    ? { start: propStartDate, end: propEndDate }
+    : calculateDateRange();
+
+  const startDate = dateRange.start;
+  const endDate = dateRange.end;
 
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
