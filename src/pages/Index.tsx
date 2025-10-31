@@ -19,7 +19,7 @@ const Index = () => {
   const [isSupabaseReady, setIsSupabaseReady] = useState(false);
   const [projectSettings, setProjectSettings] = useState({
     name: "Gestor de Proyectos Gantt",
-    startDate: new Date(2024, 9, 28), // 28 de octubre de 2024 (mes 9 porque enero es 0)
+    startDate: new Date(2025, 9, 28), // 28 de octubre de 2025 (mes 9 porque enero es 0)
     endDate: new Date(2025, 11, 31),
   });
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
