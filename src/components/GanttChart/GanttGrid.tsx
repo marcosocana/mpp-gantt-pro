@@ -1,6 +1,7 @@
 import { Task } from "@/types/gantt";
 import { eachDayOfInterval } from "date-fns";
 import { TaskBar } from "./TaskBar";
+import React from "react";
 
 interface GanttGridProps {
   tasks: Task[];
@@ -9,6 +10,7 @@ interface GanttGridProps {
   dayWidth: number;
   rowHeight: number;
   onTaskClick: (task: Task) => void;
+  scrollRef?: React.Ref<HTMLDivElement>;
 }
 
 export const GanttGrid = ({
@@ -18,8 +20,10 @@ export const GanttGrid = ({
   dayWidth,
   rowHeight,
   onTaskClick,
+  scrollRef,
 }: GanttGridProps) => {
   const days = eachDayOfInterval({ start: startDate, end: endDate });
+  const totalWidth = days.length * dayWidth;
   
   const flattenTasks = (tasks: Task[]): Task[] => {
     const result: Task[] = [];
@@ -35,35 +39,37 @@ export const GanttGrid = ({
   const flatTasks = flattenTasks(tasks);
 
   return (
-    <div className="relative bg-card overflow-x-auto overflow-y-auto">
-      {/* Vertical grid lines for days - background layer */}
-      <div className="absolute inset-0 flex pointer-events-none" style={{ zIndex: 1 }}>
-        {days.map((_, index) => (
-          <div
-            key={index}
-            className="border-r border-border/40"
-            style={{ width: `${dayWidth}px` }}
-          />
-        ))}
-      </div>
-
-      {/* Task rows - foreground layer */}
-      <div className="relative" style={{ zIndex: 5 }}>
-        {flatTasks.map((task, index) => (
-          <div
-            key={task.id}
-            className="relative border-b border-border/50"
-            style={{ height: `${rowHeight}px` }}
-          >
-            <TaskBar
-              task={task}
-              chartStartDate={startDate}
-              dayWidth={dayWidth}
-              rowHeight={rowHeight}
-              onTaskClick={onTaskClick}
+    <div ref={scrollRef} className="relative bg-card overflow-x-auto overflow-y-auto">
+      <div className="relative" style={{ width: `${totalWidth}px` }}>
+        {/* Vertical grid lines for days - background layer */}
+        <div className="absolute inset-0 flex pointer-events-none" style={{ zIndex: 1 }}>
+          {days.map((_, index) => (
+            <div
+              key={index}
+              className="border-r border-border/40"
+              style={{ width: `${dayWidth}px` }}
             />
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Task rows - foreground layer */}
+        <div className="relative" style={{ zIndex: 5 }}>
+          {flatTasks.map((task, index) => (
+            <div
+              key={task.id}
+              className="relative border-b border-border/50"
+              style={{ height: `${rowHeight}px` }}
+            >
+              <TaskBar
+                task={task}
+                chartStartDate={startDate}
+                dayWidth={dayWidth}
+                rowHeight={rowHeight}
+                onTaskClick={onTaskClick}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

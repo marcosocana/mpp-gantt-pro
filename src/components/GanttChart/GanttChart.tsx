@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Task } from "@/types/gantt";
 import { GanttHeader } from "./GanttHeader";
 import { TaskList } from "./TaskList";
 import { GanttGrid } from "./GanttGrid";
-import { startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 interface GanttChartProps {
   tasks: Task[];
@@ -20,6 +20,39 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
 
   const startDate = propStartDate || startOfMonth(new Date(2025, 10, 1));
   const endDate = propEndDate || endOfMonth(new Date(2025, 11, 31));
+
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const gridScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const headerEl = headerScrollRef.current;
+    const gridEl = gridScrollRef.current;
+    if (!headerEl || !gridEl) return;
+
+    let syncing = false;
+
+    const onHeaderScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      gridEl.scrollLeft = headerEl.scrollLeft;
+      syncing = false;
+    };
+
+    const onGridScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      headerEl.scrollLeft = gridEl.scrollLeft;
+      syncing = false;
+    };
+
+    headerEl.addEventListener("scroll", onHeaderScroll);
+    gridEl.addEventListener("scroll", onGridScroll);
+
+    return () => {
+      headerEl.removeEventListener("scroll", onHeaderScroll);
+      gridEl.removeEventListener("scroll", onGridScroll);
+    };
+  }, []);
 
   const handleToggleExpand = (taskId: string) => {
     const toggleInTasks = (tasks: Task[]): Task[] => {
@@ -46,7 +79,7 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
         >
           <h2 className="font-semibold text-sm">Título</h2>
         </div>
-        <div className="flex-1 overflow-x-auto">
+        <div className="flex-1 overflow-x-auto" ref={headerScrollRef}>
           <GanttHeader
             startDate={startDate}
             endDate={endDate}
@@ -72,6 +105,7 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
             dayWidth={DAY_WIDTH}
             rowHeight={ROW_HEIGHT}
             onTaskClick={onTaskClick}
+            scrollRef={gridScrollRef}
           />
         </div>
       </div>

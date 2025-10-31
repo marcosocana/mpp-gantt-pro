@@ -280,6 +280,24 @@ const Index = () => {
           });
 
           setTasks(importedTasks);
+
+          // Ajustar automáticamente el rango del proyecto para cubrir todas las tareas importadas
+          const allTasksFlat: Task[] = (() => {
+            const result: Task[] = [];
+            const walk = (list: Task[]) => {
+              list.forEach(t => {
+                result.push(t);
+                if (t.children && t.children.length) walk(t.children);
+              });
+            };
+            walk(importedTasks);
+            return result;
+          })();
+
+          const minStart = new Date(Math.min(...allTasksFlat.map(t => t.startDate.getTime())));
+          const maxEnd = new Date(Math.max(...allTasksFlat.map(t => t.endDate.getTime())));
+          setProjectSettings(prev => ({ ...prev, startDate: minStart, endDate: maxEnd }));
+
           toast.success("Proyecto importado correctamente");
         } catch (error) {
           console.error("Error importing:", error);
