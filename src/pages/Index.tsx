@@ -1,11 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Task } from "@/types/gantt";
 import { GanttChart } from "@/components/GanttChart/GanttChart";
 import { TaskDialog } from "@/components/GanttChart/TaskDialog";
 import { Toolbar } from "@/components/Toolbar";
+import { PasswordLogin } from "@/components/PasswordLogin";
 import { toast } from "sonner";
 
 const Index = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  useEffect(() => {
+    const auth = sessionStorage.getItem("gantt_authenticated");
+    if (auth === "true") {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: "1.1",
@@ -175,12 +185,48 @@ const Index = () => {
   };
 
   const handleImport = () => {
-    toast.info("Importar archivo .mpp - Próximamente");
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,.mpp";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      if (file.name.endsWith(".mpp")) {
+        toast.error("Los archivos .mpp requieren procesamiento en el servidor. Por favor, exporta como JSON desde MS Project.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const imported = JSON.parse(event.target?.result as string);
+          setTasks(imported);
+          toast.success("Proyecto importado correctamente");
+        } catch (error) {
+          toast.error("Error al importar el archivo");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   const handleExport = () => {
-    toast.info("Exportar proyecto - Próximamente");
+    const dataStr = JSON.stringify(tasks, null, 2);
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `gantt-project-${new Date().toISOString().split("T")[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Proyecto exportado correctamente");
   };
+
+  if (!isAuthenticated) {
+    return <PasswordLogin onAuthenticated={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background">
