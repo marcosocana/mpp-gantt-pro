@@ -232,12 +232,12 @@ const Index = () => {
           let currentSection: Task | null = null;
 
           jsonData.forEach((row: any) => {
-            const isSection = row["Tipo"] === "Sección" || !row["Tipo"];
+            const isSection = row["Tipo"] === "Sección";
             
             if (isSection) {
               currentSection = {
-                id: row["ID"] || `section-${Date.now()}-${Math.random()}`,
-                title: row["Título"] || row["Nombre"] || "Sin título",
+                id: `section-${Date.now()}-${Math.random()}`,
+                title: row["Título"] || "Sin título",
                 startDate: row["Fecha Inicio"] ? new Date(row["Fecha Inicio"]) : new Date(),
                 endDate: row["Fecha Fin"] ? new Date(row["Fecha Fin"]) : new Date(),
                 progress: Number(row["Progreso (%)"]) || 0,
@@ -248,8 +248,8 @@ const Index = () => {
               importedTasks.push(currentSection);
             } else {
               const task: Task = {
-                id: row["ID"] || `task-${Date.now()}-${Math.random()}`,
-                title: row["Título"] || row["Nombre"] || "Sin título",
+                id: `task-${Date.now()}-${Math.random()}`,
+                title: row["Título"] || "Sin título",
                 startDate: row["Fecha Inicio"] ? new Date(row["Fecha Inicio"]) : new Date(),
                 endDate: row["Fecha Fin"] ? new Date(row["Fecha Fin"]) : new Date(),
                 progress: Number(row["Progreso (%)"]) || 0,
@@ -284,7 +284,6 @@ const Index = () => {
         const isSection = task.children && task.children.length > 0;
         
         exportData.push({
-          "ID": task.id,
           "Tipo": isSection ? "Sección" : "Tarea",
           "Título": task.title,
           "Fecha Inicio": task.startDate.toISOString().split("T")[0],
