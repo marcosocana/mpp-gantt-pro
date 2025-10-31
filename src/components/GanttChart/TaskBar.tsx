@@ -17,6 +17,7 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
   const width = duration * dayWidth;
 
   const isSection = task.type === 'section';
+  const barColor = task.color || '#3b82f6'; // Azul por defecto
 
   return (
     <div
@@ -31,20 +32,24 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
       }}
       onClick={() => onTaskClick(task)}
     >
-      <div className={`h-full rounded relative overflow-hidden transition-all ${
-        isSection ? "bg-primary/80" : "bg-chart-1"
-      }`}>
+      <div 
+        className="h-full rounded relative overflow-hidden transition-all"
+        style={{ 
+          backgroundColor: barColor,
+          opacity: isSection ? 0.8 : 1
+        }}
+      >
         {/* Progress indicator in green */}
         {task.progress > 0 && (
           <div
-            className="absolute inset-y-0 left-0 bg-green-500/70 rounded-l transition-all"
+            className="absolute inset-y-0 left-0 bg-green-500 rounded-l transition-all"
             style={{ width: `${task.progress}%` }}
           />
         )}
         
         {/* Task title on bar */}
         {!isSection && (
-          <div className="absolute inset-0 flex items-center px-2 text-xs font-medium text-primary-foreground truncate z-20">
+          <div className="absolute inset-0 flex items-center px-2 text-xs font-medium text-white truncate z-20">
             {task.title}
           </div>
         )}

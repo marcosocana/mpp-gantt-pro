@@ -37,6 +37,7 @@ export const useTasks = () => {
           progress: task.progress,
           type: task.task_type as 'task' | 'section',
           dependencies: task.dependencies || [],
+          color: task.color || '#3b82f6',
           parentId: task.parent_id || undefined,
           isExpanded: task.is_expanded,
           position: task.position,
@@ -101,6 +102,7 @@ export const useTasks = () => {
         position: task.position,
         is_expanded: task.isExpanded ?? true,
         dependencies: task.dependencies,
+        color: task.color || '#3b82f6',
       };
 
       // Solo incluir el ID si ya existe (para actualizaciones)
@@ -171,6 +173,7 @@ export const useTasks = () => {
             position: index,
             is_expanded: task.isExpanded ?? true,
             dependencies: task.dependencies,
+            color: task.color || '#3b82f6',
           };
 
           // Solo incluir ID si es válido (no es temporal)

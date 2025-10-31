@@ -27,6 +27,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
   const [endDate, setEndDate] = useState("");
   const [progress, setProgress] = useState(0);
   const [type, setType] = useState<'task' | 'section'>('task');
+  const [color, setColor] = useState("#3b82f6");
 
   useEffect(() => {
     if (task) {
@@ -35,6 +36,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
       setEndDate(format(task.endDate, "yyyy-MM-dd"));
       setProgress(task.progress);
       setType(task.type);
+      setColor(task.color || "#3b82f6");
     }
   }, [task]);
 
@@ -48,6 +50,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
       endDate: new Date(endDate),
       progress,
       type,
+      color,
     };
 
     onSave(updatedTask);
@@ -131,6 +134,23 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
               value={progress}
               onChange={(e) => setProgress(Number(e.target.value))}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="color">Color de la barra</Label>
+            <div className="flex gap-2 items-center">
+              <Input
+                id="color"
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="w-20 h-10"
+              />
+              <span className="text-sm text-muted-foreground">{color}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              La barra de progreso siempre será verde
+            </p>
           </div>
         </div>
 

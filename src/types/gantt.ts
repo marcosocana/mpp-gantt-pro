@@ -6,6 +6,7 @@ export interface Task {
   progress: number;
   type: 'task' | 'section';
   dependencies: string[];
+  color?: string;
   parentId?: string;
   children?: Task[];
   isExpanded?: boolean;
