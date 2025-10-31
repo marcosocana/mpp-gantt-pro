@@ -14,7 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      tasks: {
+        Row: {
+          created_at: string
+          dependencies: string[] | null
+          end_date: string
+          id: string
+          is_expanded: boolean
+          parent_id: string | null
+          position: number
+          progress: number
+          start_date: string
+          task_type: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dependencies?: string[] | null
+          end_date: string
+          id?: string
+          is_expanded?: boolean
+          parent_id?: string | null
+          position?: number
+          progress?: number
+          start_date: string
+          task_type?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dependencies?: string[] | null
+          end_date?: string
+          id?: string
+          is_expanded?: boolean
+          parent_id?: string | null
+          position?: number
+          progress?: number
+          start_date?: string
+          task_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

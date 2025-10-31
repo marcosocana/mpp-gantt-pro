@@ -1,9 +1,24 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Task } from "@/types/gantt";
 import { GanttHeader } from "./GanttHeader";
-import { TaskList } from "./TaskList";
+import { DraggableTaskList } from "./DraggableTaskList";
 import { GanttGrid } from "./GanttGrid";
 import { startOfMonth, endOfMonth } from "date-fns";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 interface GanttChartProps {
   tasks: Task[];
@@ -115,50 +130,81 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
     onUpdateTasks(toggleInTasks(tasks));
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = tasks.findIndex((task) => task.id === active.id);
+    const newIndex = tasks.findIndex((task) => task.id === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const reorderedTasks = arrayMove(tasks, oldIndex, newIndex);
+      onUpdateTasks(reorderedTasks);
+    }
+  };
+
+  const taskIds = tasks.map((task) => task.id);
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Header row */}
-      <div className="flex border-b border-border shrink-0">
-        <div
-          className="bg-card border-r border-border flex items-center px-4 py-2 shrink-0"
-          style={{ width: `${TASK_LIST_WIDTH}px` }}
-        >
-          <h2 className="font-semibold text-sm">Título</h2>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Header row */}
+        <div className="flex border-b border-border shrink-0">
+          <div
+            className="bg-card border-r border-border flex items-center px-4 py-2 shrink-0"
+            style={{ width: `${TASK_LIST_WIDTH}px` }}
+          >
+            <h2 className="font-semibold text-sm">Título</h2>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <div className="overflow-x-auto overflow-y-hidden" ref={headerScrollRef}>
+              <GanttHeader
+                startDate={startDate}
+                endDate={endDate}
+                dayWidth={DAY_WIDTH}
+              />
+            </div>
+          </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <div className="overflow-x-auto overflow-y-hidden" ref={headerScrollRef}>
-            <GanttHeader
+
+        {/* Content area */}
+        <div className="flex flex-1 overflow-hidden">
+          <div className="shrink-0" style={{ width: `${TASK_LIST_WIDTH}px` }}>
+            <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+              <DraggableTaskList
+                tasks={tasks}
+                rowHeight={ROW_HEIGHT}
+                onTaskClick={onTaskClick}
+                onToggleExpand={handleToggleExpand}
+                scrollRef={taskListScrollRef}
+              />
+            </SortableContext>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <GanttGrid
+              tasks={tasks}
               startDate={startDate}
               endDate={endDate}
               dayWidth={DAY_WIDTH}
+              rowHeight={ROW_HEIGHT}
+              onTaskClick={onTaskClick}
+              scrollRef={gridScrollRef}
             />
           </div>
         </div>
       </div>
-
-      {/* Content area */}
-      <div className="flex flex-1 overflow-hidden">
-        <div className="shrink-0" style={{ width: `${TASK_LIST_WIDTH}px` }}>
-          <TaskList
-            tasks={tasks}
-            rowHeight={ROW_HEIGHT}
-            onTaskClick={onTaskClick}
-            onToggleExpand={handleToggleExpand}
-            scrollRef={taskListScrollRef}
-          />
-        </div>
-        <div className="flex-1 overflow-hidden">
-          <GanttGrid
-            tasks={tasks}
-            startDate={startDate}
-            endDate={endDate}
-            dayWidth={DAY_WIDTH}
-            rowHeight={ROW_HEIGHT}
-            onTaskClick={onTaskClick}
-            scrollRef={gridScrollRef}
-          />
-        </div>
-      </div>
-    </div>
+    </DndContext>
   );
 };

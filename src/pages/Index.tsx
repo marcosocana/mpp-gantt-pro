@@ -3,15 +3,24 @@ import { Task } from "@/types/gantt";
 import { GanttChart } from "@/components/GanttChart/GanttChart";
 import { TaskDialog } from "@/components/GanttChart/TaskDialog";
 import { Toolbar } from "@/components/Toolbar";
-import { PasswordLogin } from "@/components/PasswordLogin";
 import { ProjectSettingsDialog } from "@/components/ProjectSettingsDialog";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { useTasks } from "@/hooks/useTasks";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [projectSettings, setProjectSettings] = useState({
     name: "Gestor de Proyectos Gantt",
     startDate: new Date(2025, 10, 1),
@@ -19,208 +28,114 @@ const Index = () => {
   });
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const ganttRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    const auth = sessionStorage.getItem("gantt_authenticated");
-    if (auth === "true") {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  const { tasks, loading, saveTask, deleteTask, updateTasksOrder } = useTasks();
 
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: "1.1",
-      title: "Implementación",
-      startDate: new Date(2025, 10, 4),
-      endDate: new Date(2025, 10, 20),
-      progress: 0,
-      dependencies: [],
-      isExpanded: true,
-      children: [
-        {
-          id: "1.1.7",
-          title: "Hito: RFC SAP",
-          startDate: new Date(2025, 10, 4),
-          endDate: new Date(2025, 10, 5),
-          progress: 100,
-          dependencies: [],
-        },
-        {
-          id: "1.1.8",
-          title: "Hito: Catálogo de datos SAP",
-          startDate: new Date(2025, 10, 5),
-          endDate: new Date(2025, 10, 6),
-          progress: 100,
-          dependencies: ["1.1.7"],
-        },
-        {
-          id: "1.1.9",
-          title: "Implantación Microservicios",
-          startDate: new Date(2025, 10, 6),
-          endDate: new Date(2025, 10, 8),
-          progress: 80,
-          dependencies: ["1.1.8"],
-        },
-        {
-          id: "1.1.10",
-          title: "Implantación Web",
-          startDate: new Date(2025, 10, 6),
-          endDate: new Date(2025, 10, 8),
-          progress: 80,
-          dependencies: ["1.1.8"],
-        },
-        {
-          id: "1.1.11",
-          title: "Implantación APP",
-          startDate: new Date(2025, 10, 6),
-          endDate: new Date(2025, 10, 8),
-          progress: 75,
-          dependencies: ["1.1.8"],
-        },
-        {
-          id: "1.1.12",
-          title: "Proceso SQL y Carga de datos",
-          startDate: new Date(2025, 10, 6),
-          endDate: new Date(2025, 10, 11),
-          progress: 60,
-          dependencies: ["1.1.8"],
-        },
-        {
-          id: "1.1.13",
-          title: "Integración con SAP",
-          startDate: new Date(2025, 10, 11),
-          endDate: new Date(2025, 10, 15),
-          progress: 40,
-          dependencies: ["1.1.12"],
-        },
-        {
-          id: "1.1.14",
-          title: "Despliegue entorno DEV Moeve",
-          startDate: new Date(2025, 10, 8),
-          endDate: new Date(2025, 10, 10),
-          progress: 50,
-          dependencies: ["1.1.9", "1.1.10", "1.1.11"],
-        },
-        {
-          id: "1.1.15",
-          title: "Despliegue entorno DEV Moeve Química",
-          startDate: new Date(2025, 10, 15),
-          endDate: new Date(2025, 10, 18),
-          progress: 20,
-          dependencies: ["1.1.14"],
-        },
-        {
-          id: "1.1.16",
-          title: "Pruebas internas",
-          startDate: new Date(2025, 10, 18),
-          endDate: new Date(2025, 10, 20),
-          progress: 0,
-          dependencies: ["1.1.15"],
-        },
-      ],
-    },
-    {
-      id: "1.2",
-      title: "Integración",
-      startDate: new Date(2025, 10, 4),
-      endDate: new Date(2025, 10, 25),
-      progress: 0,
-      dependencies: [],
-      isExpanded: false,
-      children: [
-        {
-          id: "1.2.1",
-          title: "Hito: Datos de configuración Tenant",
-          startDate: new Date(2025, 10, 4),
-          endDate: new Date(2025, 10, 20),
-          progress: 0,
-          dependencies: [],
-        },
-      ],
-    },
-  ]);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      toast.success("Inicio de sesión exitoso");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (error) throw error;
+      toast.success("Registro exitoso. Por favor inicia sesión.");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success("Sesión cerrada");
+  };
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
     setDialogOpen(true);
   };
 
-  const handleSaveTask = (updatedTask: Task) => {
-    const updateTaskInTree = (tasks: Task[]): Task[] => {
-      return tasks.map(task => {
-        if (task.id === updatedTask.id) {
-          return updatedTask;
-        }
-        if (task.children) {
-          return { ...task, children: updateTaskInTree(task.children) };
-        }
-        return task;
-      });
-    };
-
-    setTasks(updateTaskInTree(tasks));
-    toast.success("Tarea actualizada");
+  const handleSaveTask = async (updatedTask: Task) => {
+    await saveTask(updatedTask);
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    const deleteTaskFromTree = (tasks: Task[]): Task[] => {
-      return tasks
-        .filter(task => task.id !== taskId)
-        .map(task => {
-          if (task.children) {
-            return { ...task, children: deleteTaskFromTree(task.children) };
-          }
-          return task;
-        });
-    };
-
-    setTasks(deleteTaskFromTree(tasks));
-    toast.success("Tarea eliminada");
+  const handleDeleteTask = async (taskId: string) => {
+    await deleteTask(taskId);
   };
 
-  const handleAddSection = () => {
+  const handleAddSection = async () => {
     const newSection: Task = {
       id: `section-${Date.now()}`,
       title: "Nueva Sección",
       startDate: new Date(),
       endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       progress: 0,
+      type: 'section',
       dependencies: [],
       isExpanded: true,
+      position: tasks.length,
       children: [],
     };
 
-    setTasks([...tasks, newSection]);
-    toast.success("Sección creada");
+    await saveTask(newSection);
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
       title: "Nueva tarea",
       startDate: new Date(),
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       progress: 0,
+      type: 'task',
       dependencies: [],
+      position: tasks.length,
     };
 
-    setTasks([...tasks, newTask]);
-    toast.success("Tarea creada");
+    await saveTask(newTask);
   };
 
   const handleImport = () => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".xlsx,.xls";
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
           const data = event.target?.result;
           const workbook = XLSX.read(data, { type: "binary" });
@@ -230,23 +145,22 @@ const Index = () => {
 
           const importedTasks: Task[] = [];
           let currentSection: Task | null = null;
+          let position = 0;
 
           const parseDate = (dateValue: any): Date => {
             if (!dateValue) return new Date();
             
-            // Si es un número serial de Excel
             if (typeof dateValue === 'number') {
               const excelEpoch = new Date(1899, 11, 30);
               const date = new Date(excelEpoch.getTime() + dateValue * 86400000);
               return date;
             }
             
-            // Si es un string
             const parsed = new Date(dateValue);
             return isNaN(parsed.getTime()) ? new Date() : parsed;
           };
 
-          jsonData.forEach((row: any) => {
+          for (const row of jsonData as any[]) {
             const isSection = row["Tipo"] === "Sección";
             
             if (isSection) {
@@ -256,11 +170,14 @@ const Index = () => {
                 startDate: parseDate(row["Fecha Inicio"]),
                 endDate: parseDate(row["Fecha Fin"]),
                 progress: Number(row["Progreso (%)"]) || 0,
+                type: 'section',
                 dependencies: [],
                 isExpanded: true,
+                position: position++,
                 children: [],
               };
               importedTasks.push(currentSection);
+              await saveTask(currentSection);
             } else {
               const task: Task = {
                 id: `task-${Date.now()}-${Math.random()}`,
@@ -268,7 +185,10 @@ const Index = () => {
                 startDate: parseDate(row["Fecha Inicio"]),
                 endDate: parseDate(row["Fecha Fin"]),
                 progress: Number(row["Progreso (%)"]) || 0,
+                type: 'task',
                 dependencies: row["Dependencias"] ? row["Dependencias"].split(",").map((d: string) => d.trim()) : [],
+                position: position++,
+                parentId: currentSection?.id,
               };
 
               if (currentSection) {
@@ -276,27 +196,9 @@ const Index = () => {
               } else {
                 importedTasks.push(task);
               }
+              await saveTask(task);
             }
-          });
-
-          setTasks(importedTasks);
-
-          // Ajustar automáticamente el rango del proyecto para cubrir todas las tareas importadas
-          const allTasksFlat: Task[] = (() => {
-            const result: Task[] = [];
-            const walk = (list: Task[]) => {
-              list.forEach(t => {
-                result.push(t);
-                if (t.children && t.children.length) walk(t.children);
-              });
-            };
-            walk(importedTasks);
-            return result;
-          })();
-
-          const minStart = new Date(Math.min(...allTasksFlat.map(t => t.startDate.getTime())));
-          const maxEnd = new Date(Math.max(...allTasksFlat.map(t => t.endDate.getTime())));
-          setProjectSettings(prev => ({ ...prev, startDate: minStart, endDate: maxEnd }));
+          }
 
           toast.success("Proyecto importado correctamente");
         } catch (error) {
@@ -319,12 +221,10 @@ const Index = () => {
       return date.toISOString().split("T")[0];
     };
 
-    const flattenTasks = (tasks: Task[], parentType?: string) => {
+    const flattenTasks = (tasks: Task[]) => {
       tasks.forEach((task) => {
-        const isSection = task.children && task.children.length > 0;
-        
         exportData.push({
-          "Tipo": isSection ? "Sección" : "Tarea",
+          "Tipo": task.type === 'section' ? "Sección" : "Tarea",
           "Título": task.title,
           "Fecha Inicio": formatDate(task.startDate),
           "Fecha Fin": formatDate(task.endDate),
@@ -333,7 +233,7 @@ const Index = () => {
         });
 
         if (task.children) {
-          flattenTasks(task.children, "Tarea");
+          flattenTasks(task.children);
         }
       });
     };
@@ -379,14 +279,97 @@ const Index = () => {
     }
   };
 
-  if (!isAuthenticated) {
-    return <PasswordLogin onAuthenticated={() => setIsAuthenticated(true)} />;
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Gestor de Proyectos Gantt</CardTitle>
+            <CardDescription>Inicia sesión o regístrate para continuar</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="login">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
+                <TabsTrigger value="signup">Registrarse</TabsTrigger>
+              </TabsList>
+              <TabsContent value="login">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    Iniciar Sesión
+                  </Button>
+                </form>
+              </TabsContent>
+              <TabsContent value="signup">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Contraseña</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    Registrarse
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-lg">Cargando...</div>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <header className="border-b border-border bg-card px-6 py-4">
+      <header className="border-b border-border bg-card px-6 py-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">{projectSettings.name}</h1>
+        <Button variant="outline" onClick={handleLogout}>
+          Cerrar Sesión
+        </Button>
       </header>
 
       <Toolbar
@@ -402,7 +385,7 @@ const Index = () => {
         <GanttChart
           tasks={tasks}
           onTaskClick={handleTaskClick}
-          onUpdateTasks={setTasks}
+          onUpdateTasks={updateTasksOrder}
           startDate={projectSettings.startDate}
           endDate={projectSettings.endDate}
         />

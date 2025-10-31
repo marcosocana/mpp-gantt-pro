@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 
 interface TaskDialogProps {
@@ -25,6 +26,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [progress, setProgress] = useState(0);
+  const [type, setType] = useState<'task' | 'section'>('task');
 
   useEffect(() => {
     if (task) {
@@ -32,6 +34,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
       setStartDate(format(task.startDate, "yyyy-MM-dd"));
       setEndDate(format(task.endDate, "yyyy-MM-dd"));
       setProgress(task.progress);
+      setType(task.type);
     }
   }, [task]);
 
@@ -44,6 +47,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       progress,
+      type,
     };
 
     onSave(updatedTask);
@@ -73,6 +77,19 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Nombre de la tarea"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="type">Tipo</Label>
+            <Select value={type} onValueChange={(value: 'task' | 'section') => setType(value)}>
+              <SelectTrigger id="type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="task">Tarea</SelectItem>
+                <SelectItem value="section">Sección</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
