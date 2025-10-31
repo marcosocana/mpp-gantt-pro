@@ -74,6 +74,10 @@ export const ProjectSettingsDialog = ({ open, onClose, settings, onSave }: Proje
                   selected={startDate}
                   onSelect={(date) => date && setStartDate(date)}
                   locale={es}
+                  initialFocus
+                  captionLayout="dropdown-buttons"
+                  fromYear={2020}
+                  toYear={2030}
                 />
               </PopoverContent>
             </Popover>
@@ -94,6 +98,10 @@ export const ProjectSettingsDialog = ({ open, onClose, settings, onSave }: Proje
                   selected={endDate}
                   onSelect={(date) => date && setEndDate(date)}
                   locale={es}
+                  initialFocus
+                  captionLayout="dropdown-buttons"
+                  fromYear={2020}
+                  toYear={2030}
                 />
               </PopoverContent>
             </Popover>
