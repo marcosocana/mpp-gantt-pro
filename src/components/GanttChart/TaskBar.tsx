@@ -16,7 +16,7 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
   const left = startOffset * dayWidth;
   const width = duration * dayWidth;
 
-  const isSection = task.children && task.children.length > 0;
+  const isSection = task.type === 'section';
 
   return (
     <div

@@ -151,6 +151,15 @@ const Index = () => {
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
+          // Primero eliminar todas las tareas existentes
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            toast.error("No hay usuario autenticado");
+            return;
+          }
+
+          await supabase.from('tasks').delete().eq('user_id', user.id);
+
           let position = 0;
 
           const parseDate = (dateValue: any): Date => {
@@ -166,49 +175,54 @@ const Index = () => {
             return isNaN(parsed.getTime()) ? new Date() : parsed;
           };
 
-          const tasksToImport: Task[] = [];
+          const tasksToInsert: any[] = [];
           let currentSectionId: string | null = null;
 
           for (const row of jsonData as any[]) {
             const isSection = row["Tipo"] === "Sección";
             
             if (isSection) {
-              const section: Task = {
-                id: `section-${Date.now()}-${Math.random()}`,
+              const sectionId = `section-${Date.now()}-${Math.random()}`;
+              tasksToInsert.push({
+                id: sectionId,
+                user_id: user.id,
                 title: row["Título"] || "Sin título",
-                startDate: parseDate(row["Fecha Inicio"]),
-                endDate: parseDate(row["Fecha Fin"]),
+                start_date: parseDate(row["Fecha Inicio"]).toISOString().split('T')[0],
+                end_date: parseDate(row["Fecha Fin"]).toISOString().split('T')[0],
                 progress: Number(row["Progreso (%)"]) || 0,
-                type: 'section',
+                task_type: 'section',
                 dependencies: [],
-                isExpanded: true,
+                is_expanded: true,
                 position: position++,
-                children: [],
-              };
-              tasksToImport.push(section);
-              currentSectionId = section.id;
+                parent_id: null,
+              });
+              currentSectionId = sectionId;
             } else {
-              const task: Task = {
+              tasksToInsert.push({
                 id: `task-${Date.now()}-${Math.random()}`,
+                user_id: user.id,
                 title: row["Título"] || "Sin título",
-                startDate: parseDate(row["Fecha Inicio"]),
-                endDate: parseDate(row["Fecha Fin"]),
+                start_date: parseDate(row["Fecha Inicio"]).toISOString().split('T')[0],
+                end_date: parseDate(row["Fecha Fin"]).toISOString().split('T')[0],
                 progress: Number(row["Progreso (%)"]) || 0,
-                type: 'task',
+                task_type: 'task',
                 dependencies: row["Dependencias"] ? row["Dependencias"].split(",").map((d: string) => d.trim()) : [],
                 position: position++,
-                parentId: currentSectionId || undefined,
-              };
-              tasksToImport.push(task);
+                parent_id: currentSectionId,
+                is_expanded: true,
+              });
             }
           }
 
-          // Guardar todas las tareas
-          for (const task of tasksToImport) {
-            await saveTask(task);
+          // Insertar todas las tareas de una vez
+          const { error } = await supabase.from('tasks').insert(tasksToInsert);
+          
+          if (error) {
+            console.error("Error insertando tareas:", error);
+            toast.error("Error al importar el archivo");
+          } else {
+            toast.success("Proyecto importado correctamente");
           }
-
-          toast.success("Proyecto importado correctamente");
         } catch (error) {
           console.error("Error importing:", error);
           toast.error("Error al importar el archivo");

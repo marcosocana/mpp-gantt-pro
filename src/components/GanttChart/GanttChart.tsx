@@ -127,7 +127,8 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
       });
     };
 
-    onUpdateTasks(toggleInTasks(tasks));
+    const updatedTasks = toggleInTasks(tasks);
+    onUpdateTasks(updatedTasks);
   };
 
   const sensors = useSensors(
