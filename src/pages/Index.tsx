@@ -304,6 +304,8 @@ const Index = () => {
           maxHeight: el.style.maxHeight,
           maxWidth: el.style.maxWidth,
           position: el.style.position,
+          whiteSpace: el.style.whiteSpace,
+          textOverflow: el.style.textOverflow,
         },
       });
       apply(el);
@@ -329,17 +331,38 @@ const Index = () => {
           e.style.maxHeight = "none";
           e.style.height = "auto";
           e.style.maxWidth = "none";
+          e.style.width = "auto";
         })
       );
 
       const stickies = wrapper.querySelectorAll<HTMLElement>(".sticky");
       stickies.forEach((el) => pushAdjust(el, (e) => (e.style.position = "static")));
 
-      // Forzar scroll al origen
+      // Quitar truncate de los títulos para que se vean completos
+      const truncatedTexts = wrapper.querySelectorAll<HTMLElement>(".truncate");
+      truncatedTexts.forEach((el) =>
+        pushAdjust(el, (e) => {
+          e.style.whiteSpace = "normal";
+          e.style.textOverflow = "clip";
+        })
+      );
+
+      // Hacer las líneas del grid más visibles temporalmente
+      const gridLines = wrapper.querySelectorAll<HTMLElement>(".border-border, .border-r, .border-b");
+      gridLines.forEach((el) =>
+        pushAdjust(el, (e) => {
+          if (e.style.borderColor === "" || e.style.borderColor === "currentColor") {
+            e.style.borderColor = "#e5e7eb";
+          }
+        })
+      );
+
+      // Forzar scroll al origen y esperar un momento para que se renderice
       window.scrollTo(0, 0);
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Capturar con buena resolución
-      const scale = Math.min(2, window.devicePixelRatio || 1.5);
+      const scale = 2;
 
       const canvas = await html2canvas(wrapper, {
         scale,
@@ -351,6 +374,7 @@ const Index = () => {
         height: wrapper.scrollHeight,
         scrollX: 0,
         scrollY: 0,
+        backgroundColor: "#ffffff",
       });
 
       // Crear PDF multipágina en A4 apaisado
@@ -390,6 +414,8 @@ const Index = () => {
         if (prev.maxHeight !== undefined) el.style.maxHeight = prev.maxHeight as string;
         if (prev.maxWidth !== undefined) el.style.maxWidth = prev.maxWidth as string;
         if (prev.position !== undefined) el.style.position = prev.position as string;
+        if (prev.whiteSpace !== undefined) el.style.whiteSpace = prev.whiteSpace as string;
+        if (prev.textOverflow !== undefined) el.style.textOverflow = prev.textOverflow as string;
       });
     }
   };
