@@ -8,6 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -34,10 +39,10 @@ interface GanttChartProps {
 
 export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propStartDate, endDate: propEndDate, isViewerMode = false }: GanttChartProps) => {
   const [zoomLevel, setZoomLevel] = useState(100); // Zoom percentage (100 = default)
+  const [taskListSize, setTaskListSize] = useState(25); // Percentage of width for task list
   const BASE_DAY_WIDTH = 40;
   const DAY_WIDTH = (BASE_DAY_WIDTH * zoomLevel) / 100;
   const ROW_HEIGHT = 48;
-  const TASK_LIST_WIDTH = 320;
 
   // Calculate date range from tasks if not provided
   const calculateDateRange = () => {
@@ -274,47 +279,61 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
 
         {/* Header row */}
         <div className="flex border-b border-border shrink-0 sticky top-0 z-10 bg-card">
-          <div
-            className="bg-card border-r border-border flex items-center px-4 py-2 shrink-0"
-            style={{ width: `${TASK_LIST_WIDTH}px` }}
-          >
-            <h2 className="font-semibold text-sm">Título</h2>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <div className="overflow-x-auto overflow-y-hidden" ref={headerScrollRef}>
-              <GanttHeader
-                startDate={startDate}
-                endDate={endDate}
-                dayWidth={DAY_WIDTH}
-              />
-            </div>
-          </div>
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel
+              defaultSize={taskListSize}
+              minSize={15}
+              maxSize={50}
+              onResize={(size) => setTaskListSize(size)}
+            >
+              <div className="bg-card border-r border-border flex items-center px-4 py-2 h-full">
+                <h2 className="font-semibold text-sm">Título</h2>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={100 - taskListSize}>
+              <div className="overflow-x-auto overflow-y-hidden h-full" ref={headerScrollRef}>
+                <GanttHeader
+                  startDate={startDate}
+                  endDate={endDate}
+                  dayWidth={DAY_WIDTH}
+                />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
 
         {/* Content area */}
         <div className="flex flex-1 overflow-hidden">
-          <div className="shrink-0" style={{ width: `${TASK_LIST_WIDTH}px` }}>
-            <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-              <DraggableTaskList
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel
+              defaultSize={taskListSize}
+              minSize={15}
+              maxSize={50}
+            >
+              <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+                <DraggableTaskList
+                  tasks={tasks}
+                  rowHeight={ROW_HEIGHT}
+                  onTaskClick={onTaskClick}
+                  onToggleExpand={isViewerMode ? () => {} : handleToggleExpand}
+                  scrollRef={taskListScrollRef}
+                />
+              </SortableContext>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={100 - taskListSize}>
+              <GanttGrid
                 tasks={tasks}
+                startDate={startDate}
+                endDate={endDate}
+                dayWidth={DAY_WIDTH}
                 rowHeight={ROW_HEIGHT}
                 onTaskClick={onTaskClick}
-                onToggleExpand={isViewerMode ? () => {} : handleToggleExpand}
-                scrollRef={taskListScrollRef}
+                scrollRef={gridScrollRef}
               />
-            </SortableContext>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <GanttGrid
-              tasks={tasks}
-              startDate={startDate}
-              endDate={endDate}
-              dayWidth={DAY_WIDTH}
-              rowHeight={ROW_HEIGHT}
-              onTaskClick={onTaskClick}
-              scrollRef={gridScrollRef}
-            />
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </div>
     </DndContext>
