@@ -1,5 +1,11 @@
 import { Task } from "@/types/gantt";
 import { differenceInDays } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TaskBarProps {
   task: Task;
@@ -20,25 +26,28 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
   const barColor = task.color || '#3b82f6'; // Azul por defecto
 
   return (
-    <div
-      className="absolute cursor-pointer group"
-      style={{
-        left: `${left}px`,
-        width: `${width}px`,
-        top: "50%",
-        transform: "translateY(-50%)",
-        height: isSection ? "10px" : "28px",
-        zIndex: 10,
-      }}
-      onClick={() => onTaskClick(task)}
-    >
-      <div 
-        className="h-full rounded relative overflow-hidden transition-all"
-        style={{ 
-          backgroundColor: barColor,
-          opacity: isSection ? 0.8 : 1
-        }}
-      >
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            className="absolute cursor-pointer group"
+            style={{
+              left: `${left}px`,
+              width: `${width}px`,
+              top: "50%",
+              transform: "translateY(-50%)",
+              height: isSection ? "10px" : "28px",
+              zIndex: 10,
+            }}
+            onClick={() => onTaskClick(task)}
+          >
+            <div 
+              className="h-full rounded relative overflow-hidden transition-all"
+              style={{ 
+                backgroundColor: barColor,
+                opacity: isSection ? 0.8 : 1
+              }}
+            >
         {/* Progress indicator in green */}
         {task.progress > 0 && (
           <div
@@ -63,7 +72,13 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
             {task.progress}%
           </div>
         )}
-      </div>
-    </div>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{task.title}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };

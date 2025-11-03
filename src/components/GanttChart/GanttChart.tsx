@@ -1,10 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Task } from "@/types/gantt";
 import { GanttHeader } from "./GanttHeader";
 import { DraggableTaskList } from "./DraggableTaskList";
 import { GanttGrid } from "./GanttGrid";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { ZoomIn, ZoomOut } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -31,7 +33,9 @@ interface GanttChartProps {
 }
 
 export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propStartDate, endDate: propEndDate, isViewerMode = false }: GanttChartProps) => {
-  const DAY_WIDTH = 40;
+  const [zoomLevel, setZoomLevel] = useState(100); // Zoom percentage (100 = default)
+  const BASE_DAY_WIDTH = 40;
+  const DAY_WIDTH = (BASE_DAY_WIDTH * zoomLevel) / 100;
   const ROW_HEIGHT = 48;
   const TASK_LIST_WIDTH = 320;
 
@@ -218,6 +222,18 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
 
   const taskIds = tasks.map((task) => task.id);
 
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => Math.min(prev + 25, 200));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => Math.max(prev - 25, 50));
+  };
+
+  const handleZoomReset = () => {
+    setZoomLevel(100);
+  };
+
   return (
     <DndContext
       sensors={isViewerMode ? [] : sensors}
@@ -225,6 +241,37 @@ export const GanttChart = ({ tasks, onTaskClick, onUpdateTasks, startDate: propS
       onDragEnd={isViewerMode ? () => {} : handleDragEnd}
     >
       <div className="flex flex-col h-full overflow-hidden">
+        {/* Zoom controls */}
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card">
+          <span className="text-sm font-medium">Zoom:</span>
+          <Button
+            onClick={handleZoomOut}
+            disabled={zoomLevel <= 50}
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <Button
+            onClick={handleZoomReset}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3"
+          >
+            {zoomLevel}%
+          </Button>
+          <Button
+            onClick={handleZoomIn}
+            disabled={zoomLevel >= 200}
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </div>
+
         {/* Header row */}
         <div className="flex border-b border-border shrink-0 sticky top-0 z-10 bg-card">
           <div

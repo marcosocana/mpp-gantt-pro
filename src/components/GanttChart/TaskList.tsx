@@ -1,6 +1,12 @@
 import { Task } from "@/types/gantt";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TaskListProps {
   tasks: Task[];
@@ -41,7 +47,16 @@ export const TaskList = ({ tasks, rowHeight, onTaskClick, onToggleExpand, scroll
             <div className="w-6 mr-2" />
           )}
           
-          <span className="text-sm truncate flex-1">{task.title}</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-sm truncate flex-1">{task.title}</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{task.title}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         {hasChildren && task.isExpanded && (
