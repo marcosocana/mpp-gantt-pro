@@ -103,7 +103,7 @@ const Index = () => {
   };
 
   const handleSaveTask = async (updatedTask: Task) => {
-    await saveTask(updatedTask);
+    await saveTask(updatedTask, updatedTask.previousType);
     setDialogOpen(false);
   };
 

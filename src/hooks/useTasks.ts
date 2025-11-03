@@ -86,7 +86,7 @@ export const useTasks = () => {
     }
   };
 
-  const saveTask = async (task: Task) => {
+  const saveTask = async (task: Task, previousType?: 'task' | 'section') => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user logged in');
@@ -116,6 +116,11 @@ export const useTasks = () => {
 
       if (error) throw error;
 
+      // Si cambió de tarea a sección, reorganizar las tareas siguientes
+      if (previousType === 'task' && task.type === 'section') {
+        await reorganizeTasksAfterConversion(task.id, task.parentId || null, task.position);
+      }
+
       await fetchTasks();
       
       toast({
@@ -128,6 +133,55 @@ export const useTasks = () => {
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const reorganizeTasksAfterConversion = async (sectionId: string, sectionParentId: string | null, sectionPosition: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user logged in');
+
+      // Obtener todas las tareas del usuario
+      const { data: allTasks, error: fetchError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('position', { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      // Filtrar tareas que están en el mismo nivel que la sección convertida
+      const siblingTasks = allTasks?.filter(t => 
+        (t.parent_id === sectionParentId || (!t.parent_id && !sectionParentId)) && 
+        t.position > sectionPosition &&
+        t.id !== sectionId
+      ) || [];
+
+      // Encontrar tareas que deben convertirse en hijos (hasta la siguiente sección)
+      const tasksToMove: any[] = [];
+      for (const task of siblingTasks) {
+        if (task.task_type === 'section') {
+          break; // Parar al encontrar otra sección
+        }
+        tasksToMove.push(task);
+      }
+
+      // Actualizar las tareas para que sean hijos de la nueva sección
+      if (tasksToMove.length > 0) {
+        const updates = tasksToMove.map((task, index) => ({
+          ...task,
+          parent_id: sectionId,
+          position: index,
+        }));
+
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .upsert(updates);
+
+        if (updateError) throw updateError;
+      }
+    } catch (error: any) {
+      console.error('Error reorganizing tasks:', error);
     }
   };
 

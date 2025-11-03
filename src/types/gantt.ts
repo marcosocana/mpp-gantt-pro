@@ -12,6 +12,7 @@ export interface Task {
   isExpanded?: boolean;
   position: number;
   userId?: string;
+  previousType?: 'task' | 'section';
 }
 
 export interface GanttData {

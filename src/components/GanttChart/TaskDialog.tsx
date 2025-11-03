@@ -28,6 +28,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
   const [progress, setProgress] = useState(0);
   const [type, setType] = useState<'task' | 'section'>('task');
   const [color, setColor] = useState("#3b82f6");
+  const [originalType, setOriginalType] = useState<'task' | 'section'>('task');
 
   useEffect(() => {
     if (task) {
@@ -36,6 +37,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
       setEndDate(format(task.endDate, "yyyy-MM-dd"));
       setProgress(task.progress);
       setType(task.type);
+      setOriginalType(task.type);
       setColor(task.color || "#3b82f6");
     }
   }, [task]);
@@ -51,6 +53,7 @@ export const TaskDialog = ({ task, open, onClose, onSave, onDelete }: TaskDialog
       progress,
       type,
       color,
+      previousType: originalType !== type ? originalType : undefined,
     };
 
     onSave(updatedTask);
