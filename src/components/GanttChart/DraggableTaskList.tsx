@@ -40,7 +40,9 @@ const DraggableTaskItem = ({
   return (
     <div ref={setNodeRef} style={style}>
       <div
-        className="flex items-center border-b border-border hover:bg-secondary/50 cursor-pointer group"
+        className={`flex items-center border-b border-border hover:bg-secondary/50 cursor-pointer group ${
+          task.type === 'section' ? 'bg-muted/30 font-semibold' : ''
+        }`}
         style={{ height: `${rowHeight}px`, paddingLeft: `${level * 24 + 8}px` }}
         onClick={() => onTaskClick(task)}
       >
@@ -48,7 +50,7 @@ const DraggableTaskItem = ({
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
         
-        {hasChildren ? (
+        {hasChildren || task.type === 'section' ? (
           <Button
             variant="ghost"
             size="sm"
@@ -68,7 +70,7 @@ const DraggableTaskItem = ({
           <div className="w-6 mr-2" />
         )}
         
-        <span className="text-sm truncate flex-1">
+        <span className={`text-sm truncate flex-1 ${task.type === 'section' ? 'font-semibold' : ''}`}>
           {task.title}
         </span>
       </div>

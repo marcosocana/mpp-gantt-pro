@@ -36,16 +36,19 @@ export const TaskBar = ({ task, chartStartDate, dayWidth, rowHeight, onTaskClick
               width: `${width}px`,
               top: "50%",
               transform: "translateY(-50%)",
-              height: isSection ? "10px" : "28px",
+              height: isSection ? "16px" : "28px",
               zIndex: 10,
             }}
             onClick={() => onTaskClick(task)}
           >
             <div 
-              className="h-full rounded relative overflow-hidden transition-all"
+              className={`h-full rounded relative overflow-hidden transition-all ${
+                isSection ? 'border-2' : ''
+              }`}
               style={{ 
-                backgroundColor: barColor,
-                opacity: isSection ? 0.8 : 1
+                backgroundColor: isSection ? 'transparent' : barColor,
+                borderColor: isSection ? barColor : 'transparent',
+                opacity: isSection ? 0.9 : 1
               }}
             >
         {/* Progress indicator in green */}
